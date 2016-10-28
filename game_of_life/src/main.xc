@@ -7,6 +7,8 @@
 #include "pgmIO.h"
 #include "i2c.h"
 
+#include "world.h"
+
 #define  IMHT 16                  //image height
 #define  IMWD 16                  //image width
 
@@ -177,6 +179,12 @@ int main(void) {
   char infname[] = "test.pgm";     //put your input image path here
   char outfname[] = "testout.pgm"; //put your output image path here
   chan c_inIO, c_outIO, c_control;    //extend your channel definitions here
+
+  world_t world = blank_w(new_ix(MAX_WORLD_HEIGHT, MAX_WORLD_HEIGHT));
+
+  printalive_w(world);
+
+  return -1;
 
   par {
     i2c_master(i2c, 1, p_scl, p_sda, 10);   //server thread providing orientation data
