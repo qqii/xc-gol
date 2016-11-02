@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#define MAX_WORLD_HEIGHT 64
-#define MAX_WORLD_WIDTH 64
+#define MAX_WORLD_HEIGHT 512
+#define MAX_WORLD_WIDTH 512
 #define MAX_WORLD_SIZE MAX_WORLD_HEIGHT*MAX_WORLD_WIDTH
 
 #define NULL_INDEX -1
@@ -25,8 +25,8 @@ typedef struct Ix {
  */
 typedef struct World {
   ix_t bounds;
-  int32_t hash[MAX_WORLD_WIDTH][MAX_WORLD_HEIGHT];
-  ix_t alive[2][MAX_WORLD_SIZE];
+  int32_t hash[MAX_WORLD_WIDTH / 32][MAX_WORLD_HEIGHT];
+  ix_t alive[2][8192];
   int32_t alivesize;
   uint8_t active;
 } world_t;

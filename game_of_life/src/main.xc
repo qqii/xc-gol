@@ -14,8 +14,8 @@
 
 typedef unsigned char uchar;      //using uchar as shorthand
 
-port p_scl = XS1_PORT_1E;         //interface ports to orientation
-port p_sda = XS1_PORT_1F;
+on tile[0]: port p_scl = XS1_PORT_1E;         //interface ports to orientation
+on tile[0]: port p_sda = XS1_PORT_1F;
 
 #define FXOS8700EQ_I2C_ADDR 0x1E  //register addresses for orientation
 #define FXOS8700EQ_XYZ_DATA_CFG_REG 0x0E
@@ -33,8 +33,9 @@ port p_sda = XS1_PORT_1F;
 // Read Image from PGM file from path infname[] to channel c_out
 //
 /////////////////////////////////////////////////////////////////////////////////////////
-void DataInStream(char infname[], chanend c_out)
+void DataInStream(chanend c_out)
 {
+  char infname[] = "test.pgm";     //put your input image path here
   int res;
   uchar line[ IMWD ];
   printf( "DataInStream: Start...\n" );
@@ -96,8 +97,9 @@ void distributor(chanend c_in, chanend c_out, chanend fromAcc)
 // Write pixel stream from channel c_in to PGM image file
 //
 /////////////////////////////////////////////////////////////////////////////////////////
-void DataOutStream(char outfname[], chanend c_in)
+void DataOutStream(chanend c_in)
 {
+  char outfname[] = "testout.pgm"; //put your output image path here
   int res;
   uchar line[ IMWD ];
 
@@ -167,6 +169,12 @@ void orientation( client interface i2c_master_if i2c, chanend toDist) {
   }
 }
 
+void foo(){
+    world_t world = blank_w(new_ix(MAX_WORLD_HEIGHT, MAX_WORLD_HEIGHT));
+    printalive_w(world);
+    while(1){}
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////
 //
 // Orchestrate concurrent system and start up all threads
@@ -176,22 +184,15 @@ int main(void) {
 
   i2c_master_if i2c[1];               //interface to orientation
 
-  char infname[] = "test.pgm";     //put your input image path here
-  char outfname[] = "testout.pgm"; //put your output image path here
   chan c_inIO, c_outIO, c_control;    //extend your channel definitions here
 
-  world_t world = blank_w(new_ix(MAX_WORLD_HEIGHT, MAX_WORLD_HEIGHT));
-
-  printalive_w(world);
-
-  return -1;
-
   par {
-    i2c_master(i2c, 1, p_scl, p_sda, 10);   //server thread providing orientation data
-    orientation(i2c[0],c_control);        //client thread reading orientation data
-    DataInStream(infname, c_inIO);          //thread to read in a PGM image
-    DataOutStream(outfname, c_outIO);       //thread to write out a PGM image
-    distributor(c_inIO, c_outIO, c_control);//thread to coordinate work on image
+    on tile[1]: foo();
+    on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10);   //server thread providing orientation data
+    on tile[0]: orientation(i2c[0],c_control);        //client thread reading orientation data
+    on tile[0]: DataInStream(c_inIO);          //thread to read in a PGM image
+    on tile[0]: DataOutStream(c_outIO);       //thread to write out a PGM image
+    on tile[0]: distributor(c_inIO, c_outIO, c_control);//thread to coordinate work on image
   }
 
   return 0;

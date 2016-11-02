@@ -1,3 +1,5 @@
 base:       6303592     Diff:   0
 alive / 32: 2240168             4063424
 hash  / 32: 4271880             2031712
+
+-O1:        6303512             80 //Yep the flags do nothing 
