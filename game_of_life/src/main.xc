@@ -201,20 +201,20 @@ void worker(chanend next, chanend prev, char strips[IMWD / 8 + 2][(IMHT/WCOUNT) 
       cellwp = I % 8;
       cellh = J;
       if (cellwp == 0){
-        char data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) &
-                    (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) &
-                    (64*(strips[cellw][cellh] & (5<<(7-cellwp))));
+        char data = (strips[cellw][cellh - 1] | (7<<(7-cellwp))) &
+                    (8*(strips[cellw][cellh + 1] | (7<<(7-cellwp)))) &
+                    (64*(strips[cellw][cellh] | (5<<(7-cellwp))));
       }
       else if (cellwp == 8){
-        char data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) &
-                    (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) &
-                    (64*(strips[cellw][cellh] & (5<<(7-cellwp))));
+        char data = (strips[cellw][cellh - 1] | (7<<(7-cellwp))) &
+                    (8*(strips[cellw][cellh + 1] | (7<<(7-cellwp)))) &
+                    (64*(strips[cellw][cellh] | (5<<(7-cellwp))));
       }
       else{
         //bit wizardry
-        char data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) &
-                    (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) &
-                    (64*(strips[cellw][cellh] & (5<<(7-cellwp))));
+        char data = (strips[cellw][cellh - 1] | (7<<(7-cellwp))) & //row above
+                    (8*(strips[cellw][cellh + 1] | (7<<(7-cellwp)))) & //row below
+                    (64*(strips[cellw][cellh] | (5<<(7-cellwp)))); //to the left and right
       }
       char result = gol(data);
 
