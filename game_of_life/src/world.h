@@ -26,7 +26,7 @@ typedef struct Ix {
 typedef struct World {
   ix_t bounds;
   int32_t hash[MAX_WORLD_WIDTH / 32][MAX_WORLD_HEIGHT];
-  ix_t alive[2][8192];
+  ix_t alive[2][16384];
   int32_t alivesize;
   uint8_t active;
 } world_t;
