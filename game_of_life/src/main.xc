@@ -76,7 +76,7 @@ void DataInStream(chanend c_out)
 // Currently the function just inverts the image
 //
 /////////////////////////////////////////////////////////////////////////////////////////
-unsafe void distributor(chanend c_in, chanend c_out, chanend fromAccchar, char 
+unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, char 
 (*strips)[IMWD / 8 + 2][IMHT + 2], char wnumber, char *fstart, char *fpause, char (*ffinshed)[WCOUNT])
 {
 
