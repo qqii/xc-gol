@@ -181,6 +181,59 @@ unsigned char gol(unsigned char surr){
 }
 
 
+void Supervisor(chanend next, char strips[IMWD / 8 + 2][(IMHT/WCOUNT) + 2]){
+  uint16_t cellw;
+  uint16_t cellh;
+  unsigned char cellwp;
+  unsigned char data;
+  unsigned char result;
+  char wset_mid = 1;
+  char wset_loc = 1;
+  char wset[IMWD / 8 + 2][2];
+  for(uint16_t K = 0; K < IMWD / 8; K++){
+    wset[K][wset_mid - 1] = strips[K][wset_loc - 1];
+    wset[K][wset_mid] = strips[K][wset_loc];
+    // wset[K][wset_mid + 1] = strips[K][wset_loc + 2]; 
+  }
+  while(1){
+    for (uint16_t J = 1; J < (IMHT / WCOUNT); J++){
+      for(uint16_t I = 1; I < IMWD; I++){
+        cellw = I / 8;
+        cellwp = I % 8;
+        cellh = J;
+        if (cellwp == 0){
+          char data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
+                      (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
+                      (64*(strips[cellw][cellh] & (5<<(7-cellwp))));
+        }
+        else if (cellwp == 8){
+          char data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
+                      (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
+                      (64*(strips[cellw][cellh] & (5<<(7-cellwp))));
+        }
+        else{
+          //bit wizardry
+          char data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) | //row above
+                      (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) | //row below
+                      (64*(strips[cellw][cellh] & (5<<(7-cellwp)))); //to the left and right
+        }
+        char result = gol(data);
+        wset[cellw][wset_mid] = strips[cellw, cellh] | (result<<(7 - cellwp))
+      }
+    }
+    //write back the working set
+    wset_mid = (wset_mid + 1) % 2
+    for(uint16_t L = 0; L < IMWD / 8; L++){
+      strips[L][wset_loc - 1] = wset[L][wset_mid + 1) % 2]
+      wset[L][(wset_mid + 1) % 2] = 0;
+    }
+    wset_loc = wset_loc + 1
+  }
+  for(uint16_t M = 0; M < IMWD; M++){
+    next <: strips[M][(IMHT/WCOUNT + 2)] 
+  }
+}
+
 void worker(chanend next, chanend prev, char strips[IMWD / 8 + 2][(IMHT/WCOUNT) + 2]){
   uint16_t cellw;
   uint16_t cellh;
@@ -235,6 +288,58 @@ void worker(chanend next, chanend prev, char strips[IMWD / 8 + 2][(IMHT/WCOUNT) 
   }
 }
 
+void endWorker(chanend prev, char strips[IMWD / 8 + 2][(IMHT/WCOUNT) + 2]){
+  uint16_t cellw;
+  uint16_t cellh;
+  unsigned char cellwp;
+  unsigned char data;
+  unsigned char result;
+  char wset_mid = 1;
+  char wset_loc = 1;
+  char wset[IMWD / 8 + 2][2];
+  for(uint16_t K = 0; K < IMWD / 8; K++){
+    wset[K][wset_mid - 1] = strips[K][wset_loc - 1];
+    wset[K][wset_mid] = strips[K][wset_loc];
+    // wset[K][wset_mid + 1] = strips[K][wset_loc + 2]; 
+  }
+  while(1){
+    for (uint16_t J = 1; J < (IMHT / WCOUNT); J++){
+      for(uint16_t I = 1; I < IMWD; I++){
+        cellw = I / 8;
+        cellwp = I % 8;
+        cellh = J;
+        if (cellwp == 0){
+          char data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
+                      (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
+                      (64*(strips[cellw][cellh] & (5<<(7-cellwp))));
+        }
+        else if (cellwp == 8){
+          char data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
+                      (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
+                      (64*(strips[cellw][cellh] & (5<<(7-cellwp))));
+        }
+        else{
+          //bit wizardry
+          char data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) | //row above
+                      (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) | //row below
+                      (64*(strips[cellw][cellh] & (5<<(7-cellwp)))); //to the left and right
+        }
+        char result = gol(data);
+        wset[cellw][wset_mid] = strips[cellw, cellh] | (result<<(7 - cellwp))
+      }
+    }
+    //write back the working set
+    wset_mid = (wset_mid + 1) % 2
+    for(uint16_t L = 0; L < IMWD / 8; L++){
+      strips[L][wset_loc - 1] = wset[L][wset_mid + 1) % 2]
+      wset[L][(wset_mid + 1) % 2] = 0;
+    }
+    wset_loc = wset_loc + 1
+  }
+  for(uint16_t M = 0; M < IMWD; M++){
+    prev :> strips[M][0]
+  }
+}
 /////////////////////////////////////////////////////////////////////////////////////////
 //
 // Orchestrate concurrent system and start up all threads
