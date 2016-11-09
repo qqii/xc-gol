@@ -18,6 +18,8 @@ typedef unsigned char uchar;      //using uchar as shorthand
 on tile[0]: port p_scl = XS1_PORT_1E;         //interface ports to orientation
 on tile[0]: port p_sda = XS1_PORT_1F;
 
+char array[IMWD + 2][IMHT / 8 + 2];
+
 #define FXOS8700EQ_I2C_ADDR 0x1E  //register addresses for orientation
 #define FXOS8700EQ_XYZ_DATA_CFG_REG 0x0E
 #define FXOS8700EQ_CTRL_REG_1 0x2A
@@ -73,7 +75,6 @@ void DataInStream(chanend c_out)
 /////////////////////////////////////////////////////////////////////////////////////////
 void distributor(chanend c_in, chanend c_out, chanend fromAcc)
 {
-  uchar val;
 
   //Starting up and wait for tilting of the xCore-200 Explorer
   printf( "ProcessImage: Start, size = %dx%d\n", IMHT, IMWD );
@@ -83,18 +84,21 @@ void distributor(chanend c_in, chanend c_out, chanend fromAcc)
   //Read in and do something with your image values..
   //This just inverts every pixel, but you should
   //change the image according to the "Game of Life"
-  printf( "Processing...\n" );
-  for( int y = 0; y < IMHT; y++ ) {   //go through all lines
-    for( int x = 0; x < IMWD; x++ ) { //go through each pixel per line
-      c_in :> val;                    //read the pixel value
-      c_out <: (uchar)( val ^ 0xFF ); //send some modified pixel out
+  printf( "Loading...\n" );
+  for( int y = 1; y < IMHT + 1; y++ ) {   //go through all lines
+    for( int x = 1; x < IMWD + 1; x++ ) { //go through each pixel per line
+      c_in :> array[x][y];
     }
   }
-  printf( "\nOne processing round completed...\n" );
+
+  par{
+
+  }
+  printf("Loading Complete\n");
+
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////
-//
+///////////////////////////////////////////////////////////////////////////////////////
 // Write pixel stream from channel c_in to PGM image file
 //
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -180,8 +184,7 @@ unsigned char gol(unsigned char surr){
   return count;
 }
 
-
-void Supervisor(chanend next, char strips[IMWD / 8 + 2][(IMHT/WCOUNT) + 2]){
+unsafe void worker(char (*strips)[IMWD / 8 + 2][IMHT + 2], char wnumber, char *fstart, char *fpause, char (*ffinshed)[WCOUNT]){
   uint16_t cellw;
   uint16_t cellh;
   unsigned char cellwp;
@@ -190,154 +193,49 @@ void Supervisor(chanend next, char strips[IMWD / 8 + 2][(IMHT/WCOUNT) + 2]){
   char wset_mid = 1;
   char wset_loc = 1;
   char wset[IMWD / 8 + 2][2];
-  for(uint16_t K = 0; K < IMWD / 8; K++){
-    wset[K][wset_mid - 1] = strips[K][wset_loc - 1];
-    wset[K][wset_mid] = strips[K][wset_loc];
-    // wset[K][wset_mid + 1] = strips[K][wset_loc + 2]; 
-  }
-  while(1){
-    for (uint16_t J = 1; J < (IMHT / WCOUNT); J++){
-      for(uint16_t I = 1; I < IMWD; I++){
-        cellw = I / 8;
-        cellwp = I % 8;
-        cellh = J;
-        if (cellwp == 0){
-          char data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
-                      (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
-                      (64*(strips[cellw][cellh] & (5<<(7-cellwp))));
-        }
-        else if (cellwp == 8){
-          char data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
-                      (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
-                      (64*(strips[cellw][cellh] & (5<<(7-cellwp))));
-        }
-        else{
-          //bit wizardry
-          char data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) | //row above
-                      (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) | //row below
-                      (64*(strips[cellw][cellh] & (5<<(7-cellwp)))); //to the left and right
-        }
-        char result = gol(data);
-        wset[cellw][wset_mid] = strips[cellw, cellh] | (result<<(7 - cellwp))
-      }
-    }
-    //write back the working set
-    wset_mid = (wset_mid + 1) % 2
-    for(uint16_t L = 0; L < IMWD / 8; L++){
-      strips[L][wset_loc - 1] = wset[L][wset_mid + 1) % 2]
-      wset[L][(wset_mid + 1) % 2] = 0;
-    }
-    wset_loc = wset_loc + 1
-  }
-  for(uint16_t M = 0; M < IMWD; M++){
-    next <: strips[M][(IMHT/WCOUNT + 2)] 
-  }
-}
 
-void worker(chanend next, chanend prev, char strips[IMWD / 8 + 2][(IMHT/WCOUNT) + 2]){
-  uint16_t cellw;
-  uint16_t cellh;
-  unsigned char cellwp;
-  unsigned char data;
-  unsigned char result;
-  char wset_mid = 1;
-  char wset_loc = 1;
-  char wset[IMWD / 8 + 2][2];
-  for(uint16_t K = 0; K < IMWD / 8; K++){
-    wset[K][wset_mid - 1] = strips[K][wset_loc - 1];
-    wset[K][wset_mid] = strips[K][wset_loc];
-    // wset[K][wset_mid + 1] = strips[K][wset_loc + 2]; 
-  }
-  while(1){
-    for (uint16_t J = 1; J < (IMHT / WCOUNT); J++){
-      for(uint16_t I = 1; I < IMWD; I++){
-        cellw = I / 8;
-        cellwp = I % 8;
-        cellh = J;
-        if (cellwp == 0){
-          char data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
-                      (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
-                      (64*(strips[cellw][cellh] & (5<<(7-cellwp))));
-        }
-        else if (cellwp == 8){
-          char data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
-                      (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
-                      (64*(strips[cellw][cellh] & (5<<(7-cellwp))));
-        }
-        else{
-          //bit wizardry
-          char data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) | //row above
-                      (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) | //row below
-                      (64*(strips[cellw][cellh] & (5<<(7-cellwp)))); //to the left and right
-        }
-        char result = gol(data);
-        wset[cellw][wset_mid] = strips[cellw, cellh] | (result<<(7 - cellwp))
-      }
-    }
-    //write back the working set
-    wset_mid = (wset_mid + 1) % 2
-    for(uint16_t L = 0; L < IMWD / 8; L++){
-      strips[L][wset_loc - 1] = wset[L][wset_mid + 1) % 2]
-      wset[L][(wset_mid + 1) % 2] = 0;
-    }
-    wset_loc = wset_loc + 1
-  }
-  for(uint16_t M = 0; M < IMWD; M++){
-    prev :> strips[M][0]
-    next <: strips[M][(IMHT/WCOUNT + 2)] 
-  }
-}
+  while (!fstart){}
 
-void endWorker(chanend prev, char strips[IMWD / 8 + 2][(IMHT/WCOUNT) + 2]){
-  uint16_t cellw;
-  uint16_t cellh;
-  unsigned char cellwp;
-  unsigned char data;
-  unsigned char result;
-  char wset_mid = 1;
-  char wset_loc = 1;
-  char wset[IMWD / 8 + 2][2];
   for(uint16_t K = 0; K < IMWD / 8; K++){
-    wset[K][wset_mid - 1] = strips[K][wset_loc - 1];
-    wset[K][wset_mid] = strips[K][wset_loc];
+    wset[K][wset_mid - 1] = *strips[K][wset_loc - 1];
+    wset[K][wset_mid] = *strips[K][wset_loc];
     // wset[K][wset_mid + 1] = strips[K][wset_loc + 2]; 
   }
   while(1){
-    for (uint16_t J = 1; J < (IMHT / WCOUNT); J++){
+    for (uint16_t J = 1 + (wnumber * IMHT / WCOUNT); J < ((wnumber + 1) * IMHT / WCOUNT); J++){
       for(uint16_t I = 1; I < IMWD; I++){
         cellw = I / 8;
         cellwp = I % 8;
         cellh = J;
         if (cellwp == 0){
-          char data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
-                      (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
-                      (64*(strips[cellw][cellh] & (5<<(7-cellwp))));
+          data = (*strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
+                      (8*(*strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
+                      (64*(*strips[cellw][cellh] & (5<<(7-cellwp))));
         }
         else if (cellwp == 8){
-          char data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
-                      (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
-                      (64*(strips[cellw][cellh] & (5<<(7-cellwp))));
+          data = (*strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
+                      (8*(*strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
+                      (64*(*strips[cellw][cellh] & (5<<(7-cellwp))));
         }
         else{
           //bit wizardry
-          char data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) | //row above
-                      (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) | //row below
-                      (64*(strips[cellw][cellh] & (5<<(7-cellwp)))); //to the left and right
+          data = (*strips[cellw][cellh - 1] & (7<<(7-cellwp))) | //row above
+                      (8*(*strips[cellw][cellh + 1] & (7<<(7-cellwp)))) | //row below
+                      (64*(*strips[cellw][cellh] & (5<<(7-cellwp)))); //to the left and right
         }
-        char result = gol(data);
-        wset[cellw][wset_mid] = strips[cellw, cellh] | (result<<(7 - cellwp))
+        result = gol(data);
+        wset[cellw][wset_mid] = *strips[cellw][cellh] | (result<<(7 - cellwp));
       }
+      //write back the working set
+      wset_mid = (wset_mid + 1) % 2;
+      for(uint16_t L = 0; L < IMWD / 8; L++){
+        *strips[L][wset_loc - 1] = wset[L][(wset_mid + 1) % 2];
+        wset[L][(wset_mid + 1) % 2] = 0;
+      }
+      wset_loc = wset_loc + 1;
     }
-    //write back the working set
-    wset_mid = (wset_mid + 1) % 2
-    for(uint16_t L = 0; L < IMWD / 8; L++){
-      strips[L][wset_loc - 1] = wset[L][wset_mid + 1) % 2]
-      wset[L][(wset_mid + 1) % 2] = 0;
-    }
-    wset_loc = wset_loc + 1
-  }
-  for(uint16_t M = 0; M < IMWD; M++){
-    prev :> strips[M][0]
+    *ffinshed[WCOUNT] = 1;
+    while(fpause){}
   }
 }
 /////////////////////////////////////////////////////////////////////////////////////////
