@@ -19,6 +19,9 @@ on tile[0]: port p_scl = XS1_PORT_1E;         //interface ports to orientation
 on tile[0]: port p_sda = XS1_PORT_1F;
 
 char array[IMWD + 2][IMHT / 8 + 2];
+char fstart = 0;
+char fpause = 1;
+char ffinshed[WCOUNT];
 
 #define FXOS8700EQ_I2C_ADDR 0x1E  //register addresses for orientation
 #define FXOS8700EQ_XYZ_DATA_CFG_REG 0x0E
@@ -73,7 +76,8 @@ void DataInStream(chanend c_out)
 // Currently the function just inverts the image
 //
 /////////////////////////////////////////////////////////////////////////////////////////
-void distributor(chanend c_in, chanend c_out, chanend fromAcc)
+unsafe void distributor(chanend c_in, chanend c_out, chanend fromAccchar, char 
+(*strips)[IMWD / 8 + 2][IMHT + 2], char wnumber, char *fstart, char *fpause, char (*ffinshed)[WCOUNT])
 {
 
   //Starting up and wait for tilting of the xCore-200 Explorer
@@ -243,18 +247,20 @@ unsafe void worker(char (*strips)[IMWD / 8 + 2][IMHT + 2], char wnumber, char *f
 // Orchestrate concurrent system and start up all threads
 //
 /////////////////////////////////////////////////////////////////////////////////////////
-int main(void) {
+unsafe int main(void) {
 
   i2c_master_if i2c[1];               //interface to orientation
 
   chan c_inIO, c_outIO, c_control;    //extend your channel definitions here
 
   par {
+    on tile[1]:worker(&array, 0, &fstart, &fpause, &ffinshed);
+    on tile[1]:worker(&array, 1, &fstart, &fpause, &ffinshed);
+    on tile[1]: distributor(c_inIO, c_outIO, c_control, &array, 1, &fstart, &fpause, &ffinshed);//thread to coordinate work on image
     on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10);   //server thread providing orientation data
     on tile[0]: orientation(i2c[0],c_control);        //client thread reading orientation data
     on tile[0]: DataInStream(c_inIO);          //thread to read in a PGM image
     on tile[0]: DataOutStream(c_outIO);       //thread to write out a PGM image
-    on tile[0]: distributor(c_inIO, c_outIO, c_control);//thread to coordinate work on image
   }
 
   return 0;
