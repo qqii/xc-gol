@@ -25,7 +25,7 @@ typedef struct Ix {
  */
 typedef struct World {
   ix_t bounds;
-  int32_t hash[MAX_WORLD_WIDTH][MAX_WORLD_HEIGHT];
+  uint8_t hash[MAX_WORLD_WIDTH][MAX_WORLD_HEIGHT/8];
   ix_t alive[2][MAX_WORLD_SIZE];
   int32_t alivesize;
   uint8_t active;
@@ -41,8 +41,8 @@ world_t blank_w(ix_t bounds) {
 
   world.bounds = bounds;
   for (int r = 0; r < bounds.r; r++) {
-    for (int c = 0; c < bounds.c; c++) {
-      world.hash[r][c] = NULL_INDEX;
+    for (int c = 0; c < bounds.c/8; c++) {
+      world.hash[r][c] = 0;
     }
   }
   world.alivesize = 0;
@@ -100,6 +100,23 @@ void print_ix(ix_t ix) {
 void printalive_w(world_t world) {
   for (int i = 0; i < world.alivesize; i++) {
     print_ix(world.alive[world.active][i]);
+    printf("\n");
+  }
+}
+
+void printworld_w(world_t world) {
+  for (int r = 0; r < world.bounds.r; r++) {
+    for (int c = 0; c < world.bounds.c/8; c++) {
+      printf("%c%c%c%c%c%c%c%c",
+             world.hash[r][c] & 0b10000000 ? '1' : '0',
+             world.hash[r][c] & 0b01000000 ? '1' : '0',
+             world.hash[r][c] & 0b00100000 ? '1' : '0',
+             world.hash[r][c] & 0b00010000 ? '1' : '0',
+             world.hash[r][c] & 0b00001000 ? '1' : '0',
+             world.hash[r][c] & 0b00000100 ? '1' : '0',
+             world.hash[r][c] & 0b00000010 ? '1' : '0',
+             world.hash[r][c] & 0b00000001 ? '1' : '0');
+    }
     printf("\n");
   }
 }

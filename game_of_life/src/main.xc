@@ -7,6 +7,7 @@
 #include "pgmIO.h"
 #include "i2c.h"
 
+#include <stdbool.h>
 #include "world.h"
 
 #define  IMHT 16                  //image height
@@ -14,8 +15,8 @@
 
 typedef unsigned char uchar;      //using uchar as shorthand
 
-port p_scl = XS1_PORT_1E;         //interface ports to orientation
-port p_sda = XS1_PORT_1F;
+// port p_scl = XS1_PORT_1E;         //interface ports to orientation
+// port p_sda = XS1_PORT_1F;
 
 #define FXOS8700EQ_I2C_ADDR 0x1E  //register addresses for orientation
 #define FXOS8700EQ_XYZ_DATA_CFG_REG 0x0E
@@ -167,32 +168,37 @@ void orientation( client interface i2c_master_if i2c, chanend toDist) {
   }
 }
 
+void qfunc() {
+  world_t world = blank_w(new_ix(MAX_WORLD_HEIGHT, MAX_WORLD_HEIGHT));
+
+  printalive_w(world);
+  printworld_w(world);
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////
 //
 // Orchestrate concurrent system and start up all threads
 //
 /////////////////////////////////////////////////////////////////////////////////////////
 int main(void) {
+  //
+  // i2c_master_if i2c[1];               //interface to orientation
+  //
+  // char infname[] = "test.pgm";     //put your input image path here
+  // char outfname[] = "testout.pgm"; //put your output image path here
+  // chan c_inIO, c_outIO, c_control;    //extend your channel definitions here
 
-  i2c_master_if i2c[1];               //interface to orientation
-
-  char infname[] = "test.pgm";     //put your input image path here
-  char outfname[] = "testout.pgm"; //put your output image path here
-  chan c_inIO, c_outIO, c_control;    //extend your channel definitions here
-
-  world_t world = blank_w(new_ix(MAX_WORLD_HEIGHT, MAX_WORLD_HEIGHT));
-
-  printalive_w(world);
-
-  return -1;
-
-  par {
-    i2c_master(i2c, 1, p_scl, p_sda, 10);   //server thread providing orientation data
-    orientation(i2c[0],c_control);        //client thread reading orientation data
-    DataInStream(infname, c_inIO);          //thread to read in a PGM image
-    DataOutStream(outfname, c_outIO);       //thread to write out a PGM image
-    distributor(c_inIO, c_outIO, c_control);//thread to coordinate work on image
-  }
+  qfunc();
 
   return 0;
+  //
+  // par {
+  //   i2c_master(i2c, 1, p_scl, p_sda, 10);   //server thread providing orientation data
+  //   orientation(i2c[0],c_control);        //client thread reading orientation data
+  //   DataInStream(infname, c_inIO);          //thread to read in a PGM image
+  //   DataOutStream(outfname, c_outIO);       //thread to write out a PGM image
+  //   distributor(c_inIO, c_outIO, c_control);//thread to coordinate work on image
+  // }
+  //
+  // return 0;
 }
