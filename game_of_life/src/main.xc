@@ -7,7 +7,6 @@
 #include "pgmIO.h"
 #include "i2c.h"
 
-#include <stdbool.h>
 #include "world.h"
 
 #define  IMHT 16                  //image height
@@ -170,9 +169,17 @@ void orientation( client interface i2c_master_if i2c, chanend toDist) {
 
 void qfunc() {
   world_t world = blank_w(new_ix(MAX_WORLD_HEIGHT, MAX_WORLD_HEIGHT));
+  world_t world2 = blank_w(new_ix(MAX_WORLD_HEIGHT, MAX_WORLD_HEIGHT));
 
-  printalive_w(world);
   printworld_w(world);
+  printf("\n");
+  world = setalive_w(world, new_ix(0, 0));
+  printworld_w(world);
+  printf("\n");
+  world = setalive_w(world, new_ix(15, 0));
+  world = setalive_w(world, new_ix(0, 8));
+  printworld_w(world);
+  printf("\n");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
