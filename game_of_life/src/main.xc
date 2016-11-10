@@ -1,21 +1,23 @@
 // COMS20001 - Cellular Automaton Farm - Initial Code Skeleton
 // (using the XMOS i2c accelerometer demo code)
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #include <platform.h>
 #include <xs1.h>
-#include <stdio.h>
+
 #include "pgmIO.h"
 #include "i2c.h"
 
 #include "world.h"
 
-#define  IMHT 16                  //image height
-#define  IMWD 16                  //image width
+#define IMHT 16                  //image height
+#define IMWD 16                  //image width
+#define STEP 100
 
-typedef unsigned char uchar;      //using uchar as shorthand
-
-// port p_scl = XS1_PORT_1E;         //interface ports to orientation
-// port p_sda = XS1_PORT_1F;
+on tile[0]: port p_scl = XS1_PORT_1E;         //interface ports to orientation
+on tile[0]: port p_sda = XS1_PORT_1F;
 
 #define FXOS8700EQ_I2C_ADDR 0x1E  //register addresses for orientation
 #define FXOS8700EQ_XYZ_DATA_CFG_REG 0x0E
@@ -36,7 +38,7 @@ typedef unsigned char uchar;      //using uchar as shorthand
 void DataInStream(char infname[], chanend c_out)
 {
   int res;
-  uchar line[ IMWD ];
+  uint8_t line[ IMWD ];
   printf( "DataInStream: Start...\n" );
 
   //Open PGM file
@@ -51,14 +53,14 @@ void DataInStream(char infname[], chanend c_out)
     _readinline( line, IMWD );
     for( int x = 0; x < IMWD; x++ ) {
       c_out <: line[ x ];
-      printf( "-%4.1d ", line[ x ] ); //show image values
+      // printf( "-%4.1d ", line[ x ] ); //show image values
     }
-    printf( "\n" );
+    // printf( "\n" );
   }
 
   //Close PGM image file
   _closeinpgm();
-  printf( "DataInStream: Done...\n" );
+  // printf( "DataInStream: Done...\n" );
   return;
 }
 
@@ -71,7 +73,8 @@ void DataInStream(char infname[], chanend c_out)
 /////////////////////////////////////////////////////////////////////////////////////////
 void distributor(chanend c_in, chanend c_out, chanend fromAcc)
 {
-  uchar val;
+  uint8_t val;
+  world_t world = blank_w(new_ix(IMHT, IMWD));
 
   //Starting up and wait for tilting of the xCore-200 Explorer
   printf( "ProcessImage: Start, size = %dx%d\n", IMHT, IMWD );
@@ -85,9 +88,30 @@ void distributor(chanend c_in, chanend c_out, chanend fromAcc)
   for( int y = 0; y < IMHT; y++ ) {   //go through all lines
     for( int x = 0; x < IMWD; x++ ) { //go through each pixel per line
       c_in :> val;                    //read the pixel value
-      c_out <: (uchar)( val ^ 0xFF ); //send some modified pixel out
+      world = set_w(world, new_ix(y, x), val);
     }
   }
+
+  world = flip_w(world);
+  printworld_w(world);
+  for (int i = 0; i < STEP; i++) {
+    for (int y = 0; y < IMHT; y++) {
+      for (int x = 0; x < IMWD; x++) {
+        ix_t ix = new_ix(y, x);
+        world = set_w(world, ix, step_w(world, ix));
+      }
+    }
+    world = flip_w(world);
+    printworld_w(world);
+  }
+
+  for (int y = 0; y < IMHT; y++) {
+    for (int x = 0; x < IMWD; x++) {
+      c_out <: isalive_w(world, new_ix(y, x)); //send some modified pixel out
+    }
+  }
+
+
   printf( "\nOne processing round completed...\n" );
 }
 
@@ -99,7 +123,7 @@ void distributor(chanend c_in, chanend c_out, chanend fromAcc)
 void DataOutStream(char outfname[], chanend c_in)
 {
   int res;
-  uchar line[ IMWD ];
+  uint8_t line[ IMWD ];
 
   //Open PGM file
   printf( "DataOutStream: Start...\n" );
@@ -113,9 +137,10 @@ void DataOutStream(char outfname[], chanend c_in)
   for( int y = 0; y < IMHT; y++ ) {
     for( int x = 0; x < IMWD; x++ ) {
       c_in :> line[ x ];
+      // printf( "-%4.1d ", line[ x ] ); //show image values
     }
     _writeoutline( line, IMWD );
-    printf( "DataOutStream: Line written...\n" );
+    // printf( "DataOutStream: Line written...\n" );
   }
 
   //Close the PGM image
@@ -166,46 +191,25 @@ void orientation( client interface i2c_master_if i2c, chanend toDist) {
     }
   }
 }
-
-void qfunc() {
-  world_t world = blank_w(new_ix(MAX_WORLD_HEIGHT, MAX_WORLD_HEIGHT));
-  world_t world2 = blank_w(new_ix(MAX_WORLD_HEIGHT, MAX_WORLD_HEIGHT));
-
-  printworld_w(world);
-  printf("\n");
-  world = setalive_w(world, new_ix(0, 0));
-  printworld_w(world);
-  printf("\n");
-  world = setalive_w(world, new_ix(15, 0));
-  world = setalive_w(world, new_ix(0, 8));
-  printworld_w(world);
-  printf("\n");
-}
-
 /////////////////////////////////////////////////////////////////////////////////////////
 //
 // Orchestrate concurrent system and start up all threads
 //
 /////////////////////////////////////////////////////////////////////////////////////////
 int main(void) {
-  //
-  // i2c_master_if i2c[1];               //interface to orientation
-  //
-  // char infname[] = "test.pgm";     //put your input image path here
-  // char outfname[] = "testout.pgm"; //put your output image path here
-  // chan c_inIO, c_outIO, c_control;    //extend your channel definitions here
+  i2c_master_if i2c[1];               //interface to orientation
 
-  qfunc();
+  //char infname[] = "test.pgm";     //put your input image path here
+  //char outfname[] = "testout.pgm"; //put your output image path here
+  chan c_inIO, c_outIO, c_control;    //extend your channel definitions here
+
+  par {
+    on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10);   //server thread providing orientation data
+    on tile[0]: orientation(i2c[0],c_control);        //client thread reading orientation data
+    on tile[0]: DataInStream("test.pgm", c_inIO);          //thread to read in a PGM image
+    on tile[0]: DataOutStream("testout.pgm", c_outIO);       //thread to write out a PGM image
+    on tile[1]: distributor(c_inIO, c_outIO, c_control);//thread to coordinate work on image
+  }
 
   return 0;
-  //
-  // par {
-  //   i2c_master(i2c, 1, p_scl, p_sda, 10);   //server thread providing orientation data
-  //   orientation(i2c[0],c_control);        //client thread reading orientation data
-  //   DataInStream(infname, c_inIO);          //thread to read in a PGM image
-  //   DataOutStream(outfname, c_outIO);       //thread to write out a PGM image
-  //   distributor(c_inIO, c_outIO, c_control);//thread to coordinate work on image
-  // }
-  //
-  // return 0;
 }
