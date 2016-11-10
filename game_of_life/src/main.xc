@@ -14,7 +14,7 @@
 
 #define IMHT 16                  //image height
 #define IMWD 16                  //image width
-#define STEP 100
+#define STEP 1
 
 on tile[0]: port p_scl = XS1_PORT_1E;         //interface ports to orientation
 on tile[0]: port p_sda = XS1_PORT_1F;
@@ -35,30 +35,29 @@ on tile[0]: port p_sda = XS1_PORT_1F;
 // Read Image from PGM file from path infname[] to channel c_out
 //
 /////////////////////////////////////////////////////////////////////////////////////////
-void DataInStream(char infname[], chanend c_out)
-{
+void DataInStream(char infname[], chanend c_out) {
   int res;
-  uint8_t line[ IMWD ];
-  printf( "DataInStream: Start...\n" );
+  uint8_t line[IMWD];
+  printf("DataInStream: Start...\n");
 
-  //Open PGM file
-  res = _openinpgm( infname, IMWD, IMHT );
-  if( res ) {
-    printf( "DataInStream: Error openening %s\n.", infname );
+  // Open PGM file
+  res = _openinpgm(infname, IMWD, IMHT);
+  if (res) {
+    printf("DataInStream: Error openening %s\n.", infname);
     return;
   }
 
-  //Read image line-by-line and send byte by byte to channel c_out
-  for( int y = 0; y < IMHT; y++ ) {
-    _readinline( line, IMWD );
-    for( int x = 0; x < IMWD; x++ ) {
-      c_out <: line[ x ];
+  // Read image line-by-line and send byte by byte to channel c_out
+  for (int y = 0; y < IMHT; y++) {
+    _readinline(line, IMWD);
+    for (int x = 0; x < IMWD; x++) {
+      c_out <: line[x];
       // printf( "-%4.1d ", line[ x ] ); //show image values
     }
     // printf( "\n" );
   }
 
-  //Close PGM image file
+  // Close PGM image file
   _closeinpgm();
   // printf( "DataInStream: Done...\n" );
   return;
@@ -71,23 +70,22 @@ void DataInStream(char infname[], chanend c_out)
 // Currently the function just inverts the image
 //
 /////////////////////////////////////////////////////////////////////////////////////////
-void distributor(chanend c_in, chanend c_out, chanend fromAcc)
-{
+void distributor(chanend c_in, chanend c_out, chanend fromAcc) {
   uint8_t val;
   world_t world = blank_w(new_ix(IMHT, IMWD));
 
-  //Starting up and wait for tilting of the xCore-200 Explorer
-  printf( "ProcessImage: Start, size = %dx%d\n", IMHT, IMWD );
-  printf( "Waiting for Board Tilt...\n" );
+  // Starting up and wait for tilting of the xCore-200 Explorer
+  printf("ProcessImage: Start, size = %dx%d\n", IMHT, IMWD);
+  printf("Waiting for Board Tilt...\n");
   fromAcc :> int value;
 
-  //Read in and do something with your image values..
-  //This just inverts every pixel, but you should
-  //change the image according to the "Game of Life"
-  printf( "Processing...\n" );
-  for( int y = 0; y < IMHT; y++ ) {   //go through all lines
-    for( int x = 0; x < IMWD; x++ ) { //go through each pixel per line
-      c_in :> val;                    //read the pixel value
+  // Read in and do something with your image values..
+  // This just inverts every pixel, but you should
+  // change the image according to the "Game of Life"
+  printf("Processing...\n");
+  for (int y = 0; y < IMHT; y++) {  // go through all lines
+    for (int x = 0; x < IMWD; x++) {  // go through each pixel per line
+      c_in :> val;  // read the pixel value
       world = set_w(world, new_ix(y, x), val);
     }
   }
@@ -107,12 +105,16 @@ void distributor(chanend c_in, chanend c_out, chanend fromAcc)
 
   for (int y = 0; y < IMHT; y++) {
     for (int x = 0; x < IMWD; x++) {
-      c_out <: isalive_w(world, new_ix(y, x)); //send some modified pixel out
+      if (isalive_w(world, new_ix(y, x))) {
+        val = ~0;
+      } else {
+        val = 0;
+      }
+      c_out <: val;
     }
   }
 
-
-  printf( "\nOne processing round completed...\n" );
+  printf("\nOne processing round completed...\n");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -120,32 +122,31 @@ void distributor(chanend c_in, chanend c_out, chanend fromAcc)
 // Write pixel stream from channel c_in to PGM image file
 //
 /////////////////////////////////////////////////////////////////////////////////////////
-void DataOutStream(char outfname[], chanend c_in)
-{
+void DataOutStream(char outfname[], chanend c_in) {
   int res;
-  uint8_t line[ IMWD ];
+  uint8_t line[IMWD];
 
-  //Open PGM file
-  printf( "DataOutStream: Start...\n" );
-  res = _openoutpgm( outfname, IMWD, IMHT );
-  if( res ) {
-    printf( "DataOutStream: Error opening %s\n.", outfname );
+  // Open PGM file
+  printf("DataOutStream: Start...\n");
+  res = _openoutpgm(outfname, IMWD, IMHT);
+  if (res) {
+    printf("DataOutStream: Error opening %s\n.", outfname);
     return;
   }
 
-  //Compile each line of the image and write the image line-by-line
-  for( int y = 0; y < IMHT; y++ ) {
-    for( int x = 0; x < IMWD; x++ ) {
-      c_in :> line[ x ];
+  // Compile each line of the image and write the image line-by-line
+  for (int y = 0; y < IMHT; y++) {
+    for (int x = 0; x < IMWD; x++) {
+      c_in :> line[x];
       // printf( "-%4.1d ", line[ x ] ); //show image values
     }
-    _writeoutline( line, IMWD );
+    _writeoutline(line, IMWD);
     // printf( "DataOutStream: Line written...\n" );
   }
 
-  //Close the PGM image
+  // Close the PGM image
   _closeoutpgm();
-  printf( "DataOutStream: Done...\n" );
+  printf("DataOutStream: Done...\n");
   return;
 }
 
@@ -154,13 +155,14 @@ void DataOutStream(char outfname[], chanend c_in)
 // Initialise and  read orientation, send first tilt event to channel
 //
 /////////////////////////////////////////////////////////////////////////////////////////
-void orientation( client interface i2c_master_if i2c, chanend toDist) {
+void orientation(client interface i2c_master_if i2c, chanend toDist) {
   i2c_regop_res_t result;
   char status_data = 0;
   int tilted = 0;
 
   // Configure FXOS8700EQ
-  result = i2c.write_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_XYZ_DATA_CFG_REG, 0x01);
+  result =
+      i2c.write_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_XYZ_DATA_CFG_REG, 0x01);
   if (result != I2C_REGOP_SUCCESS) {
     printf("I2C write reg failed\n");
   }
@@ -171,20 +173,20 @@ void orientation( client interface i2c_master_if i2c, chanend toDist) {
     printf("I2C write reg failed\n");
   }
 
-  //Probe the orientation x-axis forever
+  // Probe the orientation x-axis forever
   while (1) {
-
-    //check until new orientation data is available
+    // check until new orientation data is available
     do {
-      status_data = i2c.read_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_DR_STATUS, result);
+      status_data =
+          i2c.read_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_DR_STATUS, result);
     } while (!status_data & 0x08);
 
-    //get new x-axis tilt value
+    // get new x-axis tilt value
     int x = read_acceleration(i2c, FXOS8700EQ_OUT_X_MSB);
 
-    //send signal to distributor after first tilt
+    // send signal to distributor after first tilt
     if (!tilted) {
-      if (x>30) {
+      if (x > 30) {
         tilted = 1 - tilted;
         toDist <: 1;
       }
@@ -199,16 +201,16 @@ void orientation( client interface i2c_master_if i2c, chanend toDist) {
 int main(void) {
   i2c_master_if i2c[1];               //interface to orientation
 
-  //char infname[] = "test.pgm";     //put your input image path here
-  //char outfname[] = "testout.pgm"; //put your output image path here
+  //char infname[] = "test.pgm";      //put your input image path here
+  //char outfname[] = "testout.pgm";  //put your output image path here
   chan c_inIO, c_outIO, c_control;    //extend your channel definitions here
 
   par {
-    on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10);   //server thread providing orientation data
-    on tile[0]: orientation(i2c[0],c_control);        //client thread reading orientation data
-    on tile[0]: DataInStream("test.pgm", c_inIO);          //thread to read in a PGM image
-    on tile[0]: DataOutStream("testout.pgm", c_outIO);       //thread to write out a PGM image
-    on tile[1]: distributor(c_inIO, c_outIO, c_control);//thread to coordinate work on image
+    on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10);     //server thread providing orientation data
+    on tile[0]: orientation(i2c[0], c_control);            //client thread reading orientation data
+    on tile[0]: DataInStream("test.pgm", c_inIO);         //thread to read in a PGM image
+    on tile[0]: DataOutStream("testout.pgm", c_outIO);    //thread to write out a PGM image
+    on tile[1]: distributor(c_inIO, c_outIO, c_control);  //thread to coordinate work on image
   }
 
   return 0;
