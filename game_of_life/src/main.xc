@@ -71,7 +71,11 @@ void DataInStream(chanend c_out)
 // Start your implementation by changing this function to implement the game of life
 // by farming out parts of the image to worker threads who implement it...
 // Currently the function just inverts the image
-//
+//inline 
+uint16_t pmod(uint16_t i, uint16_t n) {
+  return (i % n + n) % n;
+}
+
 unsigned char gol(unsigned char surr){
   unsigned char count = 0;
   while (surr != 0){
@@ -100,29 +104,34 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
     printf("Worker %d waiting to start\n", wnumber);
   }
 
+  printf("%d\n", pmod(wset_loc - 1, IMHT));
+  wset[0][1] = (*strips)[0][15];
+
   for(uint16_t K = 0; K < IMWD / 8; K++){
     wset[K][wset_mid] = *strips[K][wset_loc];
+    wset[K][wset_mid + 1] = (*strips)[K][pmod(wset_loc - 1, IMHT)];
   }
 
   while(1){
     printf("Worker %d starting iteration\n", wnumber);
-    for (uint16_t J = 0 + (wnumber * IMHT / WCOUNT); J < (wnumber * IMHT / WCOUNT); J++){
-      for(uint16_t I = 0; I < IMWD / 8; I++){
-        for(char W = 7; W >= 0; W--){
-           printf("Worker %d checking cell %d,%d", wnumber, (8*I + W), J);
+    for (uint16_t J = 0 + (wnumber * IMHT / WCOUNT); J < ((wnumber + 1) * IMHT / WCOUNT); J++){
+      for(uint16_t I = 0; I < (IMWD / 8); I++){
+        for(int8_t W = 7; W >= 0; W--){
+           printf("Worker %d checking cell %d:%d,%d\n", wnumber, I, W, J);
         }
-        wset[I][J] = 255;
+        wset[I][wset_mid] = 255;
       }
       //write back the working set
       wset_mid = (wset_mid + 1) % 2;
       for(uint16_t L = 0; L < IMWD / 8; L++){
-        *strips[L][wset_loc - 1] = wset[L][(wset_mid + 1) % 2];
+        (*strips)[L][pmod(wset_loc - 1, IMHT)] = wset[L][(wset_mid + 1) % 2];
         wset[L][(wset_mid + 1) % 2] = 0;
       }
       wset_loc = wset_loc + 1;
     }
+    printf("Worker %d almost finished iteration\n", wnumber);
     *ffinshed[WCOUNT] = 1;
-    printf("Worker %d Finished iteration", wnumber);
+    printf("Worker %d finished iteration\n", wnumber);
     while(*fpause){}
   }
 }
