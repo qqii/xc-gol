@@ -82,59 +82,59 @@ unsigned char gol(unsigned char surr){
 }
 
 
-unsafe void worker(char (*strips)[IMWD / 8 + 2][IMHT + 2], char wnumber, char *fstart, char *fpause, char (*ffinshed)[WCOUNT]){
-  uint16_t cellw;
-  uint16_t cellh;
-  unsigned char cellwp;
-  unsigned char data;
-  unsigned char result;
-  char wset_mid = 1;
-  char wset_loc = 1;
-  char wset[IMWD / 8 + 2][2];
+unsafe void worker(char strips[IMWD / 8 + 2][IMHT + 2]){
+  // uint16_t cellw;
+  // uint16_t cellh;
+  // unsigned char cellwp;
+  // unsigned char data;
+  // unsigned char result;
+  // char wset_mid = 1;
+  // char wset_loc = 1;
+  // char wset[IMWD / 8 + 2][2];
 
-  while (!fstart){}
+  // while (!fstart){}
 
-  for(uint16_t K = 0; K < IMWD / 8; K++){
-    wset[K][wset_mid - 1] = *strips[K][wset_loc - 1];
-    wset[K][wset_mid] = *strips[K][wset_loc];
-    // wset[K][wset_mid + 1] = strips[K][wset_loc + 2]; 
-  }
-  while(1){
-    for (uint16_t J = 1 + (wnumber * IMHT / WCOUNT); J < ((wnumber + 1) * IMHT / WCOUNT); J++){
-      for(uint16_t I = 1; I < IMWD; I++){
-        cellw = I / 8;
-        cellwp = I % 8;
-        cellh = J;
-        if (cellwp == 0){
-          data = (*strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
-                      (8*(*strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
-                      (64*(*strips[cellw][cellh] & (5<<(7-cellwp))));
-        }
-        else if (cellwp == 8){
-          data = (*strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
-                      (8*(*strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
-                      (64*(*strips[cellw][cellh] & (5<<(7-cellwp))));
-        }
-        else{
-          //bit wizardry
-          data = (*strips[cellw][cellh - 1] & (7<<(7-cellwp))) | //row above
-                      (8*(*strips[cellw][cellh + 1] & (7<<(7-cellwp)))) | //row below
-                      (64*(*strips[cellw][cellh] & (5<<(7-cellwp)))); //to the left and right
-        }
-        result = gol(data);
-        wset[cellw][wset_mid] = *strips[cellw][cellh] | (result<<(7 - cellwp));
-      }
-      //write back the working set
-      wset_mid = (wset_mid + 1) % 2;
-      for(uint16_t L = 0; L < IMWD / 8; L++){
-        *strips[L][wset_loc - 1] = wset[L][(wset_mid + 1) % 2];
-        wset[L][(wset_mid + 1) % 2] = 0;
-      }
-      wset_loc = wset_loc + 1;
-    }
-    *ffinshed[WCOUNT] = 1;
-    while(fpause){}
-  }
+  // for(uint16_t K = 0; K < IMWD / 8; K++){
+  //   wset[K][wset_mid - 1] = strips[K][wset_loc - 1];
+  //   wset[K][wset_mid] = strips[K][wset_loc];
+  //   // wset[K][wset_mid + 1] = strips[K][wset_loc + 2]; 
+  // }
+  // while(1){
+  //   for (uint16_t J = 1 + (wnumber * IMHT / WCOUNT); J < ((wnumber + 1) * IMHT / WCOUNT); J++){
+  //     for(uint16_t I = 1; I < IMWD; I++){
+  //       cellw = I / 8;
+  //       cellwp = I % 8;
+  //       cellh = J;
+  //       if (cellwp == 0){
+  //         data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
+  //                     (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
+  //                     (64*(strips[cellw][cellh] & (5<<(7-cellwp))));
+  //       }
+  //       else if (cellwp == 8){
+  //         data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
+  //                     (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
+  //                     (64*(strips[cellw][cellh] & (5<<(7-cellwp))));
+  //       }
+  //       else{
+  //         //bit wizardry
+  //         data = (strips[cellw][cellh - 1] & (7<<(7-cellwp))) | //row above
+  //                     (8*(strips[cellw][cellh + 1] & (7<<(7-cellwp)))) | //row below
+  //                     (64*(strips[cellw][cellh] & (5<<(7-cellwp)))); //to the left and right
+  //       }
+  //       result = gol(data);
+  //       wset[cellw][wset_mid] = strips[cellw][cellh] | (result<<(7 - cellwp));
+  //     }
+  //     //write back the working set
+  //     wset_mid = (wset_mid + 1) % 2;
+  //     for(uint16_t L = 0; L < IMWD / 8; L++){
+  //       strips[L][wset_loc - 1] = wset[L][(wset_mid + 1) % 2];
+  //       wset[L][(wset_mid + 1) % 2] = 0;
+  //     }
+  //     wset_loc = wset_loc + 1;
+  //   }
+  //   *ffinshed[WCOUNT] = 1;
+  //   while(fpause){}
+  // }
 }
 
 unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
@@ -152,8 +152,8 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
   //This just inverts every pixel, but you should
   //change the image according to the "Game of Life"
   par{
-    worker(array, 0, &fstart, &fpause, &ffinshed);
-    worker(array, 1, &fstart, &fpause, &ffinshed);
+    worker(array);
+    worker(array);
     {
       printf( "Loading...\n" );
       for( int y = 1; y < IMHT + 1; y++ ) {   //go through all lines
