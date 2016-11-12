@@ -18,10 +18,7 @@ typedef unsigned char uchar;      //using uchar as shorthand
 on tile[0]: port p_scl = XS1_PORT_1E;         //interface ports to orientation
 on tile[0]: port p_sda = XS1_PORT_1F;
 
-char array[IMWD + 2][IMHT / 8 + 2];
-char fstart = 0;
-char fpause = 1;
-char ffinshed[WCOUNT];
+
 
 #define FXOS8700EQ_I2C_ADDR 0x1E  //register addresses for orientation
 #define FXOS8700EQ_XYZ_DATA_CFG_REG 0x0E
@@ -75,11 +72,77 @@ void DataInStream(chanend c_out)
 // by farming out parts of the image to worker threads who implement it...
 // Currently the function just inverts the image
 //
-/////////////////////////////////////////////////////////////////////////////////////////
-unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, char 
-(*strips)[IMWD / 8 + 2][IMHT + 2], char wnumber, char *fstart, char *fpause, char (*ffinshed)[WCOUNT])
-{
+unsigned char gol(unsigned char surr){
+  unsigned char count = 0;
+  while (surr != 0){
+    surr = surr & (surr - 1);
+    count += 1;
+  }
+  return count;
+}
 
+
+unsafe void worker(char (*strips)[IMWD / 8 + 2][IMHT + 2], char wnumber, char *fstart, char *fpause, char (*ffinshed)[WCOUNT]){
+  uint16_t cellw;
+  uint16_t cellh;
+  unsigned char cellwp;
+  unsigned char data;
+  unsigned char result;
+  char wset_mid = 1;
+  char wset_loc = 1;
+  char wset[IMWD / 8 + 2][2];
+
+  while (!fstart){}
+
+  for(uint16_t K = 0; K < IMWD / 8; K++){
+    wset[K][wset_mid - 1] = *strips[K][wset_loc - 1];
+    wset[K][wset_mid] = *strips[K][wset_loc];
+    // wset[K][wset_mid + 1] = strips[K][wset_loc + 2]; 
+  }
+  while(1){
+    for (uint16_t J = 1 + (wnumber * IMHT / WCOUNT); J < ((wnumber + 1) * IMHT / WCOUNT); J++){
+      for(uint16_t I = 1; I < IMWD; I++){
+        cellw = I / 8;
+        cellwp = I % 8;
+        cellh = J;
+        if (cellwp == 0){
+          data = (*strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
+                      (8*(*strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
+                      (64*(*strips[cellw][cellh] & (5<<(7-cellwp))));
+        }
+        else if (cellwp == 8){
+          data = (*strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
+                      (8*(*strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
+                      (64*(*strips[cellw][cellh] & (5<<(7-cellwp))));
+        }
+        else{
+          //bit wizardry
+          data = (*strips[cellw][cellh - 1] & (7<<(7-cellwp))) | //row above
+                      (8*(*strips[cellw][cellh + 1] & (7<<(7-cellwp)))) | //row below
+                      (64*(*strips[cellw][cellh] & (5<<(7-cellwp)))); //to the left and right
+        }
+        result = gol(data);
+        wset[cellw][wset_mid] = *strips[cellw][cellh] | (result<<(7 - cellwp));
+      }
+      //write back the working set
+      wset_mid = (wset_mid + 1) % 2;
+      for(uint16_t L = 0; L < IMWD / 8; L++){
+        *strips[L][wset_loc - 1] = wset[L][(wset_mid + 1) % 2];
+        wset[L][(wset_mid + 1) % 2] = 0;
+      }
+      wset_loc = wset_loc + 1;
+    }
+    *ffinshed[WCOUNT] = 1;
+    while(fpause){}
+  }
+}
+
+unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
+{
+  char array[IMWD + 2][IMHT / 8 + 2];
+  char fstart = 0;
+  char fpause = 1;
+  char ffinshed[WCOUNT];
   //Starting up and wait for tilting of the xCore-200 Explorer
   printf( "ProcessImage: Start, size = %dx%d\n", IMHT, IMWD );
   printf( "Waiting for Board Tilt...\n" );
@@ -88,15 +151,17 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, char
   //Read in and do something with your image values..
   //This just inverts every pixel, but you should
   //change the image according to the "Game of Life"
-  printf( "Loading...\n" );
-  for( int y = 1; y < IMHT + 1; y++ ) {   //go through all lines
-    for( int x = 1; x < IMWD + 1; x++ ) { //go through each pixel per line
-      c_in :> array[x][y];
-    }
-  }
-
   par{
-
+    worker(array, 0, &fstart, &fpause, &ffinshed);
+    worker(array, 1, &fstart, &fpause, &ffinshed);
+    {
+      printf( "Loading...\n" );
+      for( int y = 1; y < IMHT + 1; y++ ) {   //go through all lines
+        for( int x = 1; x < IMWD + 1; x++ ) { //go through each pixel per line
+          c_in :> array[x][y];
+        }
+      }
+    }
   }
   printf("Loading Complete\n");
 
@@ -179,69 +244,8 @@ void orientation( client interface i2c_master_if i2c, chanend toDist) {
 }
 
 //this will do the calculation, we just need to pack our 8 surrounding cells into a char
-unsigned char gol(unsigned char surr){
-  unsigned char count = 0;
-  while (surr != 0){
-    surr = surr & (surr - 1);
-    count += 1;
-  }
-  return count;
-}
 
-unsafe void worker(char (*strips)[IMWD / 8 + 2][IMHT + 2], char wnumber, char *fstart, char *fpause, char (*ffinshed)[WCOUNT]){
-  uint16_t cellw;
-  uint16_t cellh;
-  unsigned char cellwp;
-  unsigned char data;
-  unsigned char result;
-  char wset_mid = 1;
-  char wset_loc = 1;
-  char wset[IMWD / 8 + 2][2];
 
-  while (!fstart){}
-
-  for(uint16_t K = 0; K < IMWD / 8; K++){
-    wset[K][wset_mid - 1] = *strips[K][wset_loc - 1];
-    wset[K][wset_mid] = *strips[K][wset_loc];
-    // wset[K][wset_mid + 1] = strips[K][wset_loc + 2]; 
-  }
-  while(1){
-    for (uint16_t J = 1 + (wnumber * IMHT / WCOUNT); J < ((wnumber + 1) * IMHT / WCOUNT); J++){
-      for(uint16_t I = 1; I < IMWD; I++){
-        cellw = I / 8;
-        cellwp = I % 8;
-        cellh = J;
-        if (cellwp == 0){
-          data = (*strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
-                      (8*(*strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
-                      (64*(*strips[cellw][cellh] & (5<<(7-cellwp))));
-        }
-        else if (cellwp == 8){
-          data = (*strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
-                      (8*(*strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
-                      (64*(*strips[cellw][cellh] & (5<<(7-cellwp))));
-        }
-        else{
-          //bit wizardry
-          data = (*strips[cellw][cellh - 1] & (7<<(7-cellwp))) | //row above
-                      (8*(*strips[cellw][cellh + 1] & (7<<(7-cellwp)))) | //row below
-                      (64*(*strips[cellw][cellh] & (5<<(7-cellwp)))); //to the left and right
-        }
-        result = gol(data);
-        wset[cellw][wset_mid] = *strips[cellw][cellh] | (result<<(7 - cellwp));
-      }
-      //write back the working set
-      wset_mid = (wset_mid + 1) % 2;
-      for(uint16_t L = 0; L < IMWD / 8; L++){
-        *strips[L][wset_loc - 1] = wset[L][(wset_mid + 1) % 2];
-        wset[L][(wset_mid + 1) % 2] = 0;
-      }
-      wset_loc = wset_loc + 1;
-    }
-    *ffinshed[WCOUNT] = 1;
-    while(fpause){}
-  }
-}
 /////////////////////////////////////////////////////////////////////////////////////////
 //
 // Orchestrate concurrent system and start up all threads
@@ -254,9 +258,7 @@ unsafe int main(void) {
   chan c_inIO, c_outIO, c_control;    //extend your channel definitions here
 
   par {
-    on tile[1]:worker(&array, 0, &fstart, &fpause, &ffinshed);
-    on tile[1]:worker(&array, 1, &fstart, &fpause, &ffinshed);
-    on tile[1]: distributor(c_inIO, c_outIO, c_control, &array, 1, &fstart, &fpause, &ffinshed);//thread to coordinate work on image
+    on tile[1]: distributor(c_inIO, c_outIO, c_control);//thread to coordinate work on image
     on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10);   //server thread providing orientation data
     on tile[0]: orientation(i2c[0],c_control);        //client thread reading orientation data
     on tile[0]: DataInStream(c_inIO);          //thread to read in a PGM image
