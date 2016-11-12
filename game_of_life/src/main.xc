@@ -93,7 +93,7 @@ unsafe unsigned char getVal(char (*unsafe array)[IMWD / 8][IMHT], uint16_t x, ui
 }
 
 
-unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *unsafe fstart, char *unsafe fpause, char (*unsafe ffinshed)[WCOUNT]){
+unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *unsafe fstart, char *unsafe fpause, char (*unsafe ffinshed)[WCOUNT + 1]){
   unsigned char data;
   unsigned char result;
   uint16_t wset_mid = 0;
@@ -141,12 +141,12 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
   char array[IMWD / 8][IMHT];
   char fstart = 0;
   char fpause = 1;
-  char ffinshed[WCOUNT];
+  char ffinshed[WCOUNT + 1];
 
   char (*unsafe array_p)[IMWD / 8][IMHT] = &array;
   char *unsafe fstart_p = &fstart;
   char *unsafe fpause_p = &fpause;
-  char (*unsafe ffinshed_p)[WCOUNT] = &ffinshed;
+  char (*unsafe ffinshed_p)[WCOUNT + 1] = &ffinshed;
 
   //Starting up and wait for tilting of the xCore-200 Explorer
   printf( "ProcessImage: Start, size = %dx%d\n", IMHT, IMWD );
@@ -172,10 +172,32 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
           array[x][y] = number;
         }
       }
+
+      printf("Loading Complete\n");
       *fstart_p = 1;
+
+      for(int I = 1; I < 10; I++){
+        int nfinished = 0;
+        while (nfinished < WCOUNT){
+          printf("%d Workers Finished\n", nfinished);
+          nfinished = 0;
+          for(int J = 1; J < WCOUNT; J++){
+           nfinished += ffinshed[J];
+          }
+        }
+      }
+
+      for( int y = 0; y < IMHT; y++ ) {   //go through all lines
+        for( int x = 0; x < IMWD / 8; x++ ) { //go through each pixel per line
+          unsigned char number = 0;
+          for( int w = 7; w >= 0; w--){
+            unsigned char output = 0;
+            c_out <: output;
+          }
+        }
+      }
     }
   
-  printf("Loading Complete\n");
   }
 }
 
