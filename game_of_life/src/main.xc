@@ -82,7 +82,7 @@ unsigned char gol(unsigned char surr){
 }
 
 
-unsafe void worker(char (*strips)[IMWD / 8 + 2][IMHT + 2], char wnumber, char *fstart, char *fpause, char (*ffinshed)[WCOUNT]){
+unsafe void worker(char (*unsafe strips)[IMWD + 2][IMHT / 8 + 2], char wnumber, char *unsafe fstart, char *unsafe fpause, char (*unsafe ffinshed)[WCOUNT]){
   uint16_t cellw;
   uint16_t cellh;
   unsigned char cellwp;
@@ -143,6 +143,12 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
   char fstart = 0;
   char fpause = 1;
   char ffinshed[WCOUNT];
+
+  char (*unsafe array_p)[IMWD + 2][IMHT / 8 + 2] = &array;
+  char *unsafe fstart_p = &fstart;
+  char *unsafe fpause_p = &fpause;
+  char (*unsafe ffinshed_p)[WCOUNT] = &ffinshed;
+
   //Starting up and wait for tilting of the xCore-200 Explorer
   printf( "ProcessImage: Start, size = %dx%d\n", IMHT, IMWD );
   printf( "Waiting for Board Tilt...\n" );
@@ -152,8 +158,8 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
   //This just inverts every pixel, but you should
   //change the image according to the "Game of Life"
   par{
-    worker(array, 0, &fstart, &fpause, &ffinshed);
-    worker(array, 1, &fstart, &fpause, &ffinshed);
+    worker(array_p, 0, fstart_p, fpause_p, ffinshed_p);
+    worker(array_p, 0, fstart_p, fpause_p, ffinshed_p);
     {
       printf( "Loading...\n" );
       for( int y = 1; y < IMHT + 1; y++ ) {   //go through all lines
