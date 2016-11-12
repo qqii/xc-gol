@@ -81,48 +81,37 @@ unsigned char gol(unsigned char surr){
   return count;
 }
 
+unsafe unsigned char getVal(char (*unsafe array)[IMWD / 8][IMHT], uint16_t x, uint16_t y){
+  uint16_t cellw = x / 8;
+  char cellwp = 7 - (x % 8);
+  uint16_t cellh = y;
+  return *array[cellw][cellh] & (1 << cellwp);
+}
 
-unsafe void worker(char (*unsafe strips)[IMWD + 2][IMHT / 8 + 2], char wnumber, char *unsafe fstart, char *unsafe fpause, char (*unsafe ffinshed)[WCOUNT]){
-  uint16_t cellw;
-  uint16_t cellh;
-  unsigned char cellwp;
+
+unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *unsafe fstart, char *unsafe fpause, char (*unsafe ffinshed)[WCOUNT]){
   unsigned char data;
   unsigned char result;
-  char wset_mid = 1;
-  char wset_loc = 1;
-  char wset[IMWD / 8 + 2][2];
+  uint16_t wset_mid = 0;
+  uint16_t wset_loc = 0;
+  unsigned char wset[IMWD / 8 + 2][2];
 
-  while (!fstart){}
+  while (!*fstart){
+    printf("Worker %d waiting to start\n", wnumber);
+  }
 
   for(uint16_t K = 0; K < IMWD / 8; K++){
-    wset[K][wset_mid - 1] = *strips[K][wset_loc - 1];
     wset[K][wset_mid] = *strips[K][wset_loc];
-    // wset[K][wset_mid + 1] = strips[K][wset_loc + 2]; 
   }
+
   while(1){
-    for (uint16_t J = 1 + (wnumber * IMHT / WCOUNT); J < ((wnumber + 1) * IMHT / WCOUNT); J++){
-      for(uint16_t I = 1; I < IMWD; I++){
-        cellw = I / 8;
-        cellwp = I % 8;
-        cellh = J;
-        if (cellwp == 0){
-          data = (*strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
-                      (8*(*strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
-                      (64*(*strips[cellw][cellh] & (5<<(7-cellwp))));
+    printf("Worker %d starting iteration\n", wnumber);
+    for (uint16_t J = 0 + (wnumber * IMHT / WCOUNT); J < (wnumber * IMHT / WCOUNT); J++){
+      for(uint16_t I = 0; I < IMWD / 8; I++){
+        for(char W = 7; W >= 0; W--){
+           printf("Worker %d checking cell %d,%d", wnumber, (8*I + W), J);
         }
-        else if (cellwp == 8){
-          data = (*strips[cellw][cellh - 1] & (7<<(7-cellwp))) |
-                      (8*(*strips[cellw][cellh + 1] & (7<<(7-cellwp)))) |
-                      (64*(*strips[cellw][cellh] & (5<<(7-cellwp))));
-        }
-        else{
-          //bit wizardry
-          data = (*strips[cellw][cellh - 1] & (7<<(7-cellwp))) | //row above
-                      (8*(*strips[cellw][cellh + 1] & (7<<(7-cellwp)))) | //row below
-                      (64*(*strips[cellw][cellh] & (5<<(7-cellwp)))); //to the left and right
-        }
-        result = gol(data);
-        wset[cellw][wset_mid] = *strips[cellw][cellh] | (result<<(7 - cellwp));
+        wset[I][J] = 255;
       }
       //write back the working set
       wset_mid = (wset_mid + 1) % 2;
@@ -133,18 +122,19 @@ unsafe void worker(char (*unsafe strips)[IMWD + 2][IMHT / 8 + 2], char wnumber, 
       wset_loc = wset_loc + 1;
     }
     *ffinshed[WCOUNT] = 1;
-    while(fpause){}
+    printf("Worker %d Finished iteration", wnumber);
+    while(*fpause){}
   }
 }
 
 unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
 {
-  char array[IMWD + 2][IMHT / 8 + 2];
+  char array[IMWD / 8][IMHT];
   char fstart = 0;
   char fpause = 1;
   char ffinshed[WCOUNT];
 
-  char (*unsafe array_p)[IMWD + 2][IMHT / 8 + 2] = &array;
+  char (*unsafe array_p)[IMWD / 8][IMHT] = &array;
   char *unsafe fstart_p = &fstart;
   char *unsafe fpause_p = &fpause;
   char (*unsafe ffinshed_p)[WCOUNT] = &ffinshed;
@@ -159,18 +149,25 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
   //change the image according to the "Game of Life"
   par{
     worker(array_p, 0, fstart_p, fpause_p, ffinshed_p);
-    worker(array_p, 0, fstart_p, fpause_p, ffinshed_p);
+    worker(array_p, 1, fstart_p, fpause_p, ffinshed_p);
     {
       printf( "Loading...\n" );
-      for( int y = 1; y < IMHT + 1; y++ ) {   //go through all lines
-        for( int x = 1; x < IMWD + 1; x++ ) { //go through each pixel per line
-          c_in :> array[x][y];
+      for( int y = 0; y < IMHT; y++ ) {   //go through all lines
+        for( int x = 0; x < IMWD / 8; x++ ) { //go through each pixel per line
+          unsigned char number = 0;
+          for( int w = 7; w >= 0; w--){
+            unsigned char input = 0;
+            c_in :> input;
+            number = number | ((input/255) << w); 
+          }
+          array[x][y] = number;
         }
       }
+      *fstart_p = 1;
     }
-  }
+  
   printf("Loading Complete\n");
-
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
