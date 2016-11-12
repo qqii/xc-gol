@@ -23,6 +23,8 @@ char fstart = 0;
 char fpause = 1;
 char ffinshed[WCOUNT];
 
+typedef char (*array_p)[IMWD + 2][IMHT / 8 + 2];
+
 #define FXOS8700EQ_I2C_ADDR 0x1E  //register addresses for orientation
 #define FXOS8700EQ_XYZ_DATA_CFG_REG 0x0E
 #define FXOS8700EQ_CTRL_REG_1 0x2A
@@ -76,8 +78,8 @@ void DataInStream(chanend c_out)
 // Currently the function just inverts the image
 //
 /////////////////////////////////////////////////////////////////////////////////////////
-unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, char 
-(*strips)[IMWD / 8 + 2][IMHT + 2], char wnumber, char *fstart, char *fpause, char (*ffinshed)[WCOUNT])
+unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc,
+array_p strips, char wnumber, char *fstart, char *fpause, char (*ffinshed)[WCOUNT])
 {
 
   //Starting up and wait for tilting of the xCore-200 Explorer
@@ -188,7 +190,7 @@ unsigned char gol(unsigned char surr){
   return count;
 }
 
-unsafe void worker(char (*strips)[IMWD / 8 + 2][IMHT + 2], char wnumber, char *fstart, char *fpause, char (*ffinshed)[WCOUNT]){
+unsafe void worker(array_p strips, char wnumber, char *fstart, char *fpause, char (*ffinshed)[WCOUNT]){
   uint16_t cellw;
   uint16_t cellh;
   unsigned char cellwp;
@@ -203,7 +205,7 @@ unsafe void worker(char (*strips)[IMWD / 8 + 2][IMHT + 2], char wnumber, char *f
   for(uint16_t K = 0; K < IMWD / 8; K++){
     wset[K][wset_mid - 1] = *strips[K][wset_loc - 1];
     wset[K][wset_mid] = *strips[K][wset_loc];
-    // wset[K][wset_mid + 1] = strips[K][wset_loc + 2]; 
+    // wset[K][wset_mid + 1] = strips[K][wset_loc + 2];
   }
   while(1){
     for (uint16_t J = 1 + (wnumber * IMHT / WCOUNT); J < ((wnumber + 1) * IMHT / WCOUNT); J++){
@@ -254,8 +256,8 @@ unsafe int main(void) {
   chan c_inIO, c_outIO, c_control;    //extend your channel definitions here
 
   par {
-    on tile[1]:worker(&array, 0, &fstart, &fpause, &ffinshed);
-    on tile[1]:worker(&array, 1, &fstart, &fpause, &ffinshed);
+    on tile[1]: worker(&array, 0, &fstart, &fpause, &ffinshed);
+    on tile[1]: worker(&array, 1, &fstart, &fpause, &ffinshed);
     on tile[1]: distributor(c_inIO, c_outIO, c_control, &array, 1, &fstart, &fpause, &ffinshed);//thread to coordinate work on image
     on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10);   //server thread providing orientation data
     on tile[0]: orientation(i2c[0],c_control);        //client thread reading orientation data
