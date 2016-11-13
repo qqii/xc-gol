@@ -11,7 +11,7 @@
 
 #define  IMHT 16                  //image height
 #define  IMWD 16                //image width
-#define WCOUNT 2
+#define WCOUNT 4
 
 typedef unsigned char uchar;      //using uchar as shorthand
 
@@ -118,7 +118,12 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
         for(int8_t W = 7; W >= 0; W--){
           //  printf("Worker %d checking cell %d:%d,%d\n", wnumber, I, W, J);
         }
-        wset[I][wset_mid] = 5;
+        if (J % 2){
+          wset[I][wset_mid] = 255;
+        }
+        else{
+          wset[I][wset_mid] = 0;
+        }
       }
       //write back the working set
       wset_mid = (wset_mid + 1) % 2;
@@ -160,6 +165,12 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
   par{
     worker(array_p, 0, fstart_p, fpause_p, ffinshed_p);
     worker(array_p, 1, fstart_p, fpause_p, ffinshed_p);
+    worker(array_p, 2, fstart_p, fpause_p, ffinshed_p);
+    worker(array_p, 3, fstart_p, fpause_p, ffinshed_p);
+    // worker(array_p, 4, fstart_p, fpause_p, ffinshed_p);
+    // worker(array_p, 5, fstart_p, fpause_p, ffinshed_p);
+    // worker(array_p, 6, fstart_p, fpause_p, ffinshed_p);
+    // worker(array_p, 7, fstart_p, fpause_p, ffinshed_p);
     {
       printf( "Loading...\n" );
       for( int y = 0; y < IMHT; y++ ) {   //go through all lines
