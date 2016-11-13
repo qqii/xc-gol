@@ -12,7 +12,7 @@
 #define  IMHT 16                  //image height
 #define  IMWD 16                //image width
 #define WCOUNT 4
-#define ITERATIONS 100
+#define ITERATIONS 2
 
 typedef unsigned char uchar;      //using uchar as shorthand
 
@@ -105,6 +105,9 @@ unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
   alive += getVal(array, x - 1, y + 1);
   alive += getVal(array, x, y + 1);
   alive += getVal(array, x + 1, y + 1);
+
+  //printf("%d,%d: %d\n",x,y, alive);
+
   if (self && alive < 2){
     return 0;
   }
@@ -123,26 +126,31 @@ unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
 }
 
 
-unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *unsafe fstart, char *unsafe fpause, char (*unsafe ffinshed)[WCOUNT]){
+unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *unsafe fstart, char *unsafe fpause, char (*unsafe ffinshed)[WCOUNT], char *unsafe fstop){
   // unsigned char data;
   // unsigned char result;
   uint16_t wset_mid = 0;
-  uint16_t wset_loc = 0;
+  uint16_t wset_loc = (wnumber * IMHT / WCOUNT);
   unsigned char wset[IMWD / 8][2];
+  int iteration = 0;
+
+  (*ffinshed)[wnumber] = 0;
 
   while (!*fstart){
     // printf("Worker %d waiting to start\n", wnumber);
   }
 
 
-  for(uint16_t K = 0; K < IMWD / 8; K++){
-    wset[K][wset_mid] = *strips[K][wset_loc];
+  for(uint16_t K = 0; K < (IMWD / 8); K++){
+    wset[K][wset_mid] = (*strips)[K][wset_loc];
     wset[K][wset_mid + 1] = (*strips)[K][pmod(wset_loc - 1, IMHT)];
   }
+  // printf("Worker %d Wset row %d: %d\t%d\n",wnumber, 0, wset[0][0], wset[1][0]);
+  // printf("Worker %d Wset row %d: %d\t%d\n",wnumber, 1, wset[0][1], wset[1][1]);
 
-  while(1){
+  while(!*fstop){
     // printf("Worker %d starting iteration\n", wnumber);
-    for (uint16_t J = 0 + (wnumber * IMHT / WCOUNT); J < ((wnumber + 1) * IMHT / WCOUNT); J++){
+    for (uint16_t J = 0 + (wnumber * IMHT / WCOUNT); J <= ((wnumber + 1) * IMHT / WCOUNT); J++){
       for(uint16_t I = 0; I < (IMWD / 8); I++){
         unsigned char data = 0;
         for(int8_t W = 0; W < 8; W++){
@@ -153,17 +161,18 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
         wset[I][wset_mid] = data;
       }
       //write back the working set
-      wset_mid = (wset_mid + 1) % 2;
       for(uint16_t L = 0; L < IMWD / 8; L++){
         (*strips)[L][pmod(wset_loc - 1, IMHT)] = wset[L][(wset_mid + 1) % 2];
         wset[L][(wset_mid + 1) % 2] = 0;
       }
+      wset_mid = (wset_mid + 1) % 2;
       wset_loc = wset_loc + 1;
     }
     // printf("Worker %d almost finished iteration\n", wnumber);
     (*ffinshed)[wnumber] = 1;
-    //printf("Worker %d finished iteration\n", wnumber);
-    while(*fpause == 1){
+    printf("Worker %d finished iteration %d\n", wnumber, iteration);
+    iteration++;
+    while((*ffinshed)[wnumber] && !*fpause){
       // printf("Worker %d waiting for next iteration\n", wnumber);
     }
   }
@@ -175,11 +184,13 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
   char fstart = 0;
   char fpause = 1;
   char ffinshed[WCOUNT];
+  char fstop = 0;
 
   char (*unsafe array_p)[IMWD / 8][IMHT] = &array;
   char *unsafe fstart_p = &fstart;
   char *unsafe fpause_p = &fpause;
   char (*unsafe ffinshed_p)[WCOUNT] = &ffinshed;
+  char *unsafe fstop_p = &fstop;
 
   //Starting up and wait for tilting of the xCore-200 Explorer
   printf( "ProcessImage: Start, size = %dx%d\n", IMHT, IMWD );
@@ -190,10 +201,10 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
   //This just inverts every pixel, but you should
   //change the image according to the "Game of Life"
   par{
-    worker(array_p, 0, fstart_p, fpause_p, ffinshed_p);
-    worker(array_p, 1, fstart_p, fpause_p, ffinshed_p);
-    worker(array_p, 2, fstart_p, fpause_p, ffinshed_p);
-    worker(array_p, 3, fstart_p, fpause_p, ffinshed_p);
+    worker(array_p, 0, fstart_p, fpause_p, ffinshed_p, fstop_p);
+    worker(array_p, 1, fstart_p, fpause_p, ffinshed_p, fstop_p);
+    worker(array_p, 2, fstart_p, fpause_p, ffinshed_p, fstop_p);
+    worker(array_p, 3, fstart_p, fpause_p, ffinshed_p, fstop_p);
     // worker(array_p, 4, fstart_p, fpause_p, ffinshed_p);
     // worker(array_p, 5, fstart_p, fpause_p, ffinshed_p);
     // worker(array_p, 6, fstart_p, fpause_p, ffinshed_p);
@@ -216,27 +227,35 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
       *fstart_p = 1;
 
       for(int I = 1; I < ITERATIONS; I++){
-        fpause = 1;
         int nfinished = 0;
         while (nfinished < WCOUNT){
           nfinished = 0;
           for(int J = 0; J < WCOUNT; J++){
             nfinished += (*ffinshed_p)[J];
           }
+        // printf("%d Workers Finished on iteration %d\n", nfinished, I);
         }
         //printf("%d Workers Finished on iteration %d\n", nfinished, I);
+        fpause = 1;
         for(int J = 0; J < WCOUNT; J++){
           (*ffinshed_p)[J] = 0;
         }
-        if (I % 1000 == 0){
+        fpause = 0;
+        if (I % 1 == 0){
           printf("Finished iteration %d\n", I);
         }
         // printf("Ready to unpause workers\n");
-        if (I != ITERATIONS - 1){
-          *fpause_p = 0;
-        }
         // printf("Pause flag set to %d\n", *fpause_p);
       }
+      int nfinished = 0;
+      while (nfinished < WCOUNT){
+        nfinished = 0;
+        for(int J = 0; J < WCOUNT; J++){
+          nfinished += (*ffinshed_p)[J];
+        }
+      }
+      printf("Finished last iteration\n");
+      fstop = 1;
 
 
       for( int y = 0; y < IMHT; y++ ) {   //go through all lines
