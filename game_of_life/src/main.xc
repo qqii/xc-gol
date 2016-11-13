@@ -106,7 +106,7 @@ unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
   alive += getVal(array, x, y + 1);
   alive += getVal(array, x + 1, y + 1);
 
-  //printf("%d,%d: %d\n",x,y, alive);
+  // printf("%d,%d: %d\n",x,y, alive);
 
   if (self && alive < 2){
     return 0;
@@ -121,7 +121,7 @@ unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
     return 1;
   }
   else{
-    return 255;
+    return 0;
   }
 }
 
