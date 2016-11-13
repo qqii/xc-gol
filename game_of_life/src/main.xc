@@ -98,7 +98,7 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
   unsigned char result;
   uint16_t wset_mid = 0;
   uint16_t wset_loc = 0;
-  unsigned char wset[IMWD / 8 + 2][2];
+  unsigned char wset[IMWD / 8][2];
 
   while (!*fstart){
     // printf("Worker %d waiting to start\n", wnumber);
@@ -191,9 +191,12 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
           printf("%d: %d\n", J, (*ffinshed_p)[J]);
         }
         printf("Ready to unpause workers\n");
-        *fpause_p = 0;
+        if (I != 9){
+          *fpause_p = 0;
+        }
         printf("Pause flag set to %d\n", *fpause_p);
       }
+
 
       for( int y = 0; y < IMHT; y++ ) {   //go through all lines
         for( int x = 0; x < IMWD / 8; x++ ) { //go through each pixel per line
