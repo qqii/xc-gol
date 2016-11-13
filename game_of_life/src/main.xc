@@ -12,6 +12,7 @@
 #define  IMHT 16                  //image height
 #define  IMWD 16                //image width
 #define WCOUNT 4
+#define ITERATIONS 100
 
 typedef unsigned char uchar;      //using uchar as shorthand
 
@@ -86,11 +87,39 @@ unsigned char gol(unsigned char surr){
 }
 
 unsafe unsigned char getVal(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
-  uint16_t cellw = x / 8;
+  uint16_t cellw = pmod (x, IMWD) / 8;
   char cellwp = 7 - (x % 8);
-  uint16_t cellh = y;
+  uint16_t cellh = pmod(y, IMHT);
   // printf("Getting cell %d:%d, %d\n", cellw, cellwp, cellh);
   return ((*array)[cellw][cellh] & (1<< cellwp)) >> cellwp;
+}
+
+unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
+  unsigned char alive = 0;
+  unsigned char self = getVal(array, x, y);
+  alive += getVal(array, x - 1, y - 1);
+  alive += getVal(array, x, y - 1);
+  alive += getVal(array, x + 1, y - 1);
+  alive += getVal(array, x - 1, y);
+  alive += getVal(array, x + 1, y);
+  alive += getVal(array, x - 1, y + 1);
+  alive += getVal(array, x, y + 1);
+  alive += getVal(array, x + 1, y + 1);
+  if (self && alive < 2){
+    return 0;
+  }
+  else if (self && (alive == 2 || alive == 3)){
+    return 1;
+  }
+  else if (self && alive > 3){
+    return 0;
+  }
+  else if (!self && alive == 3){
+    return 1;
+  }
+  else{
+    return 255;
+  }
 }
 
 
@@ -112,18 +141,16 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
   }
 
   while(1){
-    printf("Worker %d starting iteration\n", wnumber);
+    // printf("Worker %d starting iteration\n", wnumber);
     for (uint16_t J = 0 + (wnumber * IMHT / WCOUNT); J < ((wnumber + 1) * IMHT / WCOUNT); J++){
       for(uint16_t I = 0; I < (IMWD / 8); I++){
-        for(int8_t W = 7; W >= 0; W--){
+        unsigned char data = 0;
+        for(int8_t W = 0; W < 8; W++){
+          unsigned char cell = update(strips, 8 * I + W, J);
+          data = data | cell << (7 - W);
           //  printf("Worker %d checking cell %d:%d,%d\n", wnumber, I, W, J);
         }
-        if (J % 2){
-          wset[I][wset_mid] = 255;
-        }
-        else{
-          wset[I][wset_mid] = 0;
-        }
+        wset[I][wset_mid] = data;
       }
       //write back the working set
       wset_mid = (wset_mid + 1) % 2;
@@ -133,7 +160,7 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
       }
       wset_loc = wset_loc + 1;
     }
-    printf("Worker %d almost finished iteration\n", wnumber);
+    // printf("Worker %d almost finished iteration\n", wnumber);
     (*ffinshed)[wnumber] = 1;
     //printf("Worker %d finished iteration\n", wnumber);
     while(*fpause == 1){
@@ -188,7 +215,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
       printf("Loading Complete\n");
       *fstart_p = 1;
 
-      for(int I = 1; I < 10; I++){
+      for(int I = 1; I < ITERATIONS; I++){
         fpause = 1;
         int nfinished = 0;
         while (nfinished < WCOUNT){
@@ -197,15 +224,18 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
             nfinished += (*ffinshed_p)[J];
           }
         }
-        printf("%d Workers Finished on iteration %d\n", nfinished, I);
+        //printf("%d Workers Finished on iteration %d\n", nfinished, I);
         for(int J = 0; J < WCOUNT; J++){
           (*ffinshed_p)[J] = 0;
         }
-        printf("Ready to unpause workers\n");
-        if (I != 9){
+        if (I % 1000 == 0){
+          printf("Finished iteration %d\n", I);
+        }
+        // printf("Ready to unpause workers\n");
+        if (I != ITERATIONS - 1){
           *fpause_p = 0;
         }
-        printf("Pause flag set to %d\n", *fpause_p);
+        // printf("Pause flag set to %d\n", *fpause_p);
       }
 
 
