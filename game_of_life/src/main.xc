@@ -94,8 +94,8 @@ unsafe unsigned char getVal(char (*unsafe array)[IMWD / 8][IMHT], uint16_t x, ui
 
 
 unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *unsafe fstart, char *unsafe fpause, char (*unsafe ffinshed)[WCOUNT]){
-  unsigned char data;
-  unsigned char result;
+  // unsigned char data;
+  // unsigned char result;
   uint16_t wset_mid = 0;
   uint16_t wset_loc = 0;
   unsigned char wset[IMWD / 8][2];
@@ -122,14 +122,14 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
       //write back the working set
       wset_mid = (wset_mid + 1) % 2;
       for(uint16_t L = 0; L < IMWD / 8; L++){
-        (*strips)[L][pmod(wset_loc - 1, IMHT)] = wset[L][(wset_mid + 1) % 2];
-        wset[L][(wset_mid + 1) % 2] = 0;
+//        (*strips)[L][pmod(wset_loc - 1, IMHT)] = wset[L][(wset_mid + 1) % 2];
+//        wset[L][(wset_mid + 1) % 2] = 0;
       }
       wset_loc = wset_loc + 1;
     }
     printf("Worker %d almost finished iteration\n", wnumber);
     (*ffinshed)[wnumber] = 1;
-    printf("Worker %d finished iteration\n", wnumber);
+    //printf("Worker %d finished iteration\n", wnumber);
     while(*fpause == 1){
       // printf("Worker %d waiting for next iteration\n", wnumber);
     }
@@ -176,7 +176,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
       printf("Loading Complete\n");
       *fstart_p = 1;
 
-      for(int I = 1; I < 10; I++){
+      for(int I = 1; I < 1; I++){
         fpause = 1;
         int nfinished = 0;
         while (nfinished < WCOUNT){
@@ -188,7 +188,6 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
         printf("%d Workers Finished on iteration %d\n", nfinished, I);
         for(int J = 0; J < WCOUNT; J++){
           (*ffinshed_p)[J] = 0;
-          printf("%d: %d\n", J, (*ffinshed_p)[J]);
         }
         printf("Ready to unpause workers\n");
         if (I != 9){
@@ -202,7 +201,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
         for( int x = 0; x < IMWD / 8; x++ ) { //go through each pixel per line
           unsigned char number = 0;
           for( int w = 7; w >= 0; w--){
-            unsigned char output = 0;
+            unsigned char output = ((*array_p)[x][y] & (1 << w) >> w);
             c_out <: output;
           }
         }
@@ -234,9 +233,11 @@ void DataOutStream(chanend c_in)
   for( int y = 0; y < IMHT; y++ ) {
     for( int x = 0; x < IMWD; x++ ) {
       c_in :> line[ x ];
+      printf( "-%4.1d ", line[ x ] ); //show image values
     }
+    
     _writeoutline( line, IMWD );
-    printf( "DataOutStream: Line written...\n" );
+    printf( "\n" );
   }
 
   //Close the PGM image
