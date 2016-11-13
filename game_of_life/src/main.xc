@@ -12,7 +12,7 @@
 #define  IMHT 16                  //image height
 #define  IMWD 16                //image width
 #define WCOUNT 4
-#define ITERATIONS 100
+#define ITERATIONS 1
 
 typedef unsigned char uchar;      //using uchar as shorthand
 
@@ -130,7 +130,10 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
   uint16_t wset_loc = 0;
   unsigned char wset[IMWD / 8][2];
 
-  while (!*fstart){
+  uint16_t voodoo = 0;
+
+  while (!*fstart || voodoo == 3){
+    voodoo = voodoo + 1 % 3;
     // printf("Worker %d waiting to start\n", wnumber);
   }
 
@@ -164,6 +167,7 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
     (*ffinshed)[wnumber] = 1;
     //printf("Worker %d finished iteration\n", wnumber);
     while(*fpause == 1){
+      voodoo = voodoo + 1 % 3;
       // printf("Worker %d waiting for next iteration\n", wnumber);
     }
   }
@@ -215,7 +219,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
       printf("Loading Complete\n");
       *fstart_p = 1;
 
-      for(int I = 1; I < ITERATIONS; I++){
+      for(int I = 0; I < ITERATIONS; I++){
         fpause = 1;
         int nfinished = 0;
         while (nfinished < WCOUNT){
@@ -228,7 +232,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
         for(int J = 0; J < WCOUNT; J++){
           (*ffinshed_p)[J] = 0;
         }
-        if (I % 1000 == 0){
+        if (I % 10000 == 0){
           printf("Finished iteration %d\n", I);
         }
         // printf("Ready to unpause workers\n");
