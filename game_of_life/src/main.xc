@@ -12,7 +12,7 @@
 #define  IMHT 16                  //image height
 #define  IMWD 16                //image width
 #define WCOUNT 4
-#define ITERATIONS 2
+#define ITERATIONS 1
 
 typedef unsigned char uchar;      //using uchar as shorthand
 
@@ -172,7 +172,7 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
     (*ffinshed)[wnumber] = 1;
     printf("Worker %d finished iteration %d\n", wnumber, iteration);
     iteration++;
-    while((*ffinshed)[wnumber] && !*fpause){
+    while((*ffinshed)[wnumber] || !*fpause){
       // printf("Worker %d waiting for next iteration\n", wnumber);
     }
   }
