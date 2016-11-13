@@ -10,7 +10,7 @@
 #include "world.h"
 
 #define  IMHT 16                  //image height
-#define  IMWD 16                  //image width
+#define  IMWD 16                //image width
 #define WCOUNT 2
 
 typedef unsigned char uchar;      //using uchar as shorthand
@@ -118,13 +118,13 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
         for(int8_t W = 7; W >= 0; W--){
           //  printf("Worker %d checking cell %d:%d,%d\n", wnumber, I, W, J);
         }
-        wset[I][wset_mid] = 255;
+        wset[I][wset_mid] = 5;
       }
       //write back the working set
       wset_mid = (wset_mid + 1) % 2;
       for(uint16_t L = 0; L < IMWD / 8; L++){
-//        (*strips)[L][pmod(wset_loc - 1, IMHT)] = wset[L][(wset_mid + 1) % 2];
-//        wset[L][(wset_mid + 1) % 2] = 0;
+        (*strips)[L][pmod(wset_loc - 1, IMHT)] = wset[L][(wset_mid + 1) % 2];
+        wset[L][(wset_mid + 1) % 2] = 0;
       }
       wset_loc = wset_loc + 1;
     }
@@ -177,7 +177,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
       printf("Loading Complete\n");
       *fstart_p = 1;
 
-      for(int I = 1; I < 1; I++){
+      for(int I = 1; I < 10; I++){
         fpause = 1;
         int nfinished = 0;
         while (nfinished < WCOUNT){
