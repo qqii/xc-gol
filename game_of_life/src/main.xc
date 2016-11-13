@@ -85,11 +85,12 @@ unsigned char gol(unsigned char surr){
   return count;
 }
 
-unsafe unsigned char getVal(char (*unsafe array)[IMWD / 8][IMHT], uint16_t x, uint16_t y){
+unsafe unsigned char getVal(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
   uint16_t cellw = x / 8;
   char cellwp = 7 - (x % 8);
   uint16_t cellh = y;
-  return *array[cellw][cellh] & (1 << cellwp);
+  // printf("Getting cell %d:%d, %d\n", cellw, cellwp, cellh);
+  return ((*array)[cellw][cellh] & (1<< cellwp)) >> cellwp;
 }
 
 
@@ -198,12 +199,9 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
 
 
       for( int y = 0; y < IMHT; y++ ) {   //go through all lines
-        for( int x = 0; x < IMWD / 8; x++ ) { //go through each pixel per line
-          unsigned char number = 0;
-          for( int w = 7; w >= 0; w--){
-            unsigned char output = ((*array_p)[x][y] & (1 << w) >> w);
-            c_out <: output;
-          }
+        for( int x = 0; x < IMWD; x++ ) { //go through each pixel per line
+          unsigned char output = 255 * getVal(array_p, x, y);
+          c_out <: (output);
         }
       }
     }
