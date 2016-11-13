@@ -97,6 +97,7 @@ unsafe unsigned char getVal(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
 unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
   unsigned char alive = 0;
   unsigned char self = getVal(array, x, y);
+  return self + 1 % 2;
   alive += getVal(array, x - 1, y - 1);
   alive += getVal(array, x, y - 1);
   alive += getVal(array, x + 1, y - 1);
@@ -170,7 +171,7 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
     }
     // printf("Worker %d almost finished iteration\n", wnumber);
     (*ffinshed)[wnumber] = 1;
-    printf("Worker %d finished iteration %d\n", wnumber, iteration);
+    // printf("Worker %d finished iteration %d\n", wnumber, iteration);
     iteration++;
     while((*ffinshed)[wnumber] || !*fpause){
       // printf("Worker %d waiting for next iteration\n", wnumber);
@@ -241,7 +242,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
           (*ffinshed_p)[J] = 0;
         }
         fpause = 0;
-        if (I % 1 == 0){
+        if (I % 100 == 0){
           printf("Finished iteration %d\n", I);
         }
         // printf("Ready to unpause workers\n");
