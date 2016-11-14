@@ -11,7 +11,7 @@
 
 #define  IMHT 16                  //image height
 #define  IMWD 16                //image width
-#define WCOUNT 4
+#define WCOUNT 7
 #define ITERATIONS 1
 
 typedef unsigned char uchar;      //using uchar as shorthand
@@ -126,6 +126,10 @@ unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
 unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *unsafe fstart, char *unsafe fpause, char (*unsafe ffinshed)[WCOUNT], char *unsafe fstop){
   uint16_t startRow = wnumber * IMHT / WCOUNT;
   uint16_t endRow = (wnumber + 1) * IMHT / WCOUNT;
+  if (wnumber == (WCOUNT - 1)){
+    endRow = IMHT;
+  }
+
   uint16_t wset_mid = 0;
   unsigned char firstRow[IMWD / 8];
   unsigned char wset[IMWD / 8][2];
@@ -219,10 +223,9 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
     worker(array_p, 1, fstart_p, fpause_p, ffinshed_p, fstop_p);
     worker(array_p, 2, fstart_p, fpause_p, ffinshed_p, fstop_p);
     worker(array_p, 3, fstart_p, fpause_p, ffinshed_p, fstop_p);
-    // worker(array_p, 4, fstart_p, fpause_p, ffinshed_p);
-    // worker(array_p, 5, fstart_p, fpause_p, ffinshed_p);
-    // worker(array_p, 6, fstart_p, fpause_p, ffinshed_p);
-    // worker(array_p, 7, fstart_p, fpause_p, ffinshed_p);
+    worker(array_p, 4, fstart_p, fpause_p, ffinshed_p, fstop_p);
+    worker(array_p, 5, fstart_p, fpause_p, ffinshed_p, fstop_p);
+    worker(array_p, 6, fstart_p, fpause_p, ffinshed_p, fstop_p);
     {
       printf( "Loading...\n" );
       for( int y = 0; y < IMHT; y++ ) {   //go through all lines
