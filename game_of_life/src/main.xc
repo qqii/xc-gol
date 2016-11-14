@@ -12,7 +12,7 @@
 #define  IMHT 16                  //image height
 #define  IMWD 16                //image width
 #define WCOUNT 7
-#define ITERATIONS 100
+#define ITERATIONS 10000
 typedef unsigned char uchar;      //using uchar as shorthand
 
 on tile[0]: port p_scl = XS1_PORT_1E;         //interface ports to orientation
@@ -71,22 +71,19 @@ void DataInStream(chanend c_out)
 // Start your implementation by changing this function to implement the game of life
 // by farming out parts of the image to worker threads who implement it...
 // Currently the function just inverts the image
-//inline
 uint16_t pmod(uint16_t i, uint16_t n) {
   return (i % n + n) % n;
 }
 
+//gets the value at an absolute XY coordianate
 unsafe unsigned char getVal(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
   uint16_t cellw = pmod (x, IMWD) / 8;
   char cellwp = 7 - (pmod (x, IMWD) % 8);
   uint16_t cellh = pmod(y, IMHT);
-  // printf("Getting cell %d:%d, %d\n", cellw, cellwp, cellh);
-//   if ((*array)[cellw][cellh] != 0){
-//    printf("Cell %d:%d,%d is %d\n", cellw, cellwp, cellh, (*array)[cellw][cellh]);
-//   }
   return ((*array)[cellw][cellh] & (1<< cellwp)) >> cellwp;
 }
 
+//prints stuff
 unsafe void print_world(char (*unsafe array)[IMWD / 8][IMHT]) {
   char alive = 219;
   char dead = 176; // to 178
@@ -107,6 +104,7 @@ unsafe void print_world(char (*unsafe array)[IMWD / 8][IMHT]) {
   }
 }
 
+//returns whether a given cell will be alive. Takes absolute XY coordianates
 unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
   unsigned char alive = 0;
   unsigned char self = getVal(array, x, y);
@@ -118,11 +116,6 @@ unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
   alive += getVal(array, x - 1, y + 1);
   alive += getVal(array, x, y + 1);
   alive += getVal(array, x + 1, y + 1);
-
-  if (self != 0){
-    // printf("%d, %d was 1 with %d neighbours\n", x, y, alive);
-  }
-  //return self;
 
   if (self && alive < 2){
     return 0;
@@ -157,74 +150,73 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
   (*ffinshed)[wnumber] = 0;
 
   while (!*fstart){
-    // printf("Worker %d waiting to start\n", wnumber);
   }
 
   while(!*fstop){
-    // printf("Worker %d starting iteration %d\n", wnumber, iteration);
     for (uint16_t J = startRow; J <= endRow; J++){
       for(uint16_t I = 0; I < (IMWD / 8); I++){
         unsigned char data = 0;
         for(int8_t W = 0; W < 8; W++){
           unsigned char cell = update(strips, 8 * I + W, J);
-          if (cell == 1){
-            // printf("Worker %d discovered cell that should be 1 at %d,%d\n", wnumber, 8*I + W, J);
-          }
           data = data | cell << (7 - W);
-          //  printf("Worker %d checking cell %d:%d,%d\n", wnumber, I, W, J);
         }
-        if (data != 0){
-          // printf("Char at %d,%d is %d\n", I, J, data);
-          // printf("Char was written to line %d of the working set\n", wset_mid);
-        }
-
+        //store the first row out of the way
         if (J == startRow){
           firstRow[I] = data;
         }
+        //write to the working set
         else{
           wset[I][wset_mid] = data;
         }
       }
-      //write back the working set sometimes
+      //update which row in the working set is current
+      //Don't need to do it the first time because we haven't used it
       if (J > startRow){
         wset_mid = (wset_mid + 1) % 2;
       }
+      // write back the working set to the array, except the first and last rows
       if (J > startRow + 1){
         for(uint16_t L = 0; L < IMWD / 8; L++){
           (*strips)[L][J - 1] = wset[L][wset_mid];
         }
       }
     }
-    // printf("Worker %d almost finished iteration\n", wnumber);
+    //say we've finished
     (*ffinshed)[wnumber] = 1;
+
+    //wait until the previous worker finishes so we can put in the first row
     while(!(*ffinshed)[pmod(wnumber - 1, WCOUNT)]){
     }
 
     //write the first and last rows
+    //last could be written back earlier but whatever
     for(int I = 0; I < IMWD / 8; I++){
       (*strips)[I][endRow - 1] = wset[I][wset_mid];
       (*strips)[I][startRow] = firstRow[I];
     }
+    
+    //reset the working set pointer
+    //not sure if this actually need to happen
     wset_mid = 0;
 
-    // printf("Worker %d finished iteration %d\n", wnumber, iteration);
     iteration++;
+
+    //wait until the coordinator gives the go ahead for another round
     while((*ffinshed)[wnumber] || *fpause){
-      // if (wnumber == 0){
-      //  printf("Worker %d waiting for next iteration\n", wnumber);
-      // }
     }
   }
 }
 
 unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
 {
+  //data structure and flags
   char array[IMWD / 8][IMHT];
   char fstart = 0;
   char fpause = 1;
   char ffinshed[WCOUNT];
   char fstop = 0;
 
+  //unsafe pointers, eeek
   char (*unsafe array_p)[IMWD / 8][IMHT] = &array;
   char *unsafe fstart_p = &fstart;
   char *unsafe fpause_p = &fpause;
@@ -234,10 +226,8 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
   //Starting up and wait for tilting of the xCore-200 Explorer
   printf( "ProcessImage: Start, size = %dx%d\n", IMHT, IMWD );
 
-  //Read in and do something with your image values..
-  //This just inverts every pixel, but you should
-  //change the image according to the "Game of Life"
   par{
+    //create all the workers, and do some stuff as well in a sequential block
     worker(array_p, 0, fstart_p, fpause_p, ffinshed_p, fstop_p);
     worker(array_p, 1, fstart_p, fpause_p, ffinshed_p, fstop_p);
     worker(array_p, 2, fstart_p, fpause_p, ffinshed_p, fstop_p);
@@ -250,9 +240,10 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
       for( int y = 0; y < IMHT; y++ ) {   //go through all lines
         for( int x = 0; x < IMWD / 8; x++ ) { //go through each pixel per line
           unsigned char number = 0;
-          for( int w = 7; w >= 0; w--){
+          for( int w = 7; w >= 0; w--){ //go through all bits in a byte
             unsigned char input = 0;
             c_in :> input;
+            //bit wizardry (lite)
             number = number | ((input/255) << w);
           }
           array[x][y] = number;
@@ -263,29 +254,33 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
       printf("Loading Complete\n");
       *fstart_p = 1;
 
+      //do iterations. This handles all but the last one
+      //when ITERATIONS == 1 this doesn't get run
       for(int I = 1; I < ITERATIONS; I++){
         int nfinished = 0;
         while (nfinished < WCOUNT){
+          //wait until they're all finished
           nfinished = 0;
           for(int J = 0; J < WCOUNT; J++){
-           //printf("Worker %d: %d\n", J, (*ffinshed_p)[J]);
             nfinished += ffinshed[J];
           }
-        // printf("%d Workers Finished on iteration %d\n", nfinished, I);
         }
-        //printf("%d Workers Finished on iteration %d\n", nfinished, I);
+        //handbrake on
         fpause = 1;
-        //print_world(array_p);
+        //unset the finished flags for all of them
+        //so that they all go at the same time
         for(int J = 0; J < WCOUNT; J++){
           (*ffinshed_p)[J] = 0;
         }
         fpause = 0;
+
+        //print sometimes, but rarely because it's super slow
         if (I % 1000 == 0){
           printf("Finished iteration %d\n", I);
         }
-        // printf("Ready to unpause workers\n");
-        // printf("Pause flag set to %d\n", *fpause_p);
       }
+
+      //check that they're all finished for the last iteration
       int nfinished = 0;
       while (nfinished < WCOUNT){
         nfinished = 0;
@@ -293,9 +288,13 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
           nfinished += ffinshed[J];
         }
       }
+
       printf("Finished last iteration\n");
+
+      //this will actually gracefully shut them down
       fstop = 1;
 
+      //write the output to the writer thread
       print_world(array_p);
       for( int y = 0; y < IMHT; y++ ) {   //go through all lines
         for( int x = 0; x < IMWD; x++ ) { //go through each pixel per line
