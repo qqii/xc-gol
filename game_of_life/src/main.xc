@@ -13,7 +13,6 @@
 #define  IMWD 16                //image width
 #define WCOUNT 7
 #define ITERATIONS 100
-
 typedef unsigned char uchar;      //using uchar as shorthand
 
 on tile[0]: port p_scl = XS1_PORT_1E;         //interface ports to orientation
@@ -79,7 +78,7 @@ uint16_t pmod(uint16_t i, uint16_t n) {
 
 unsafe unsigned char getVal(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
   uint16_t cellw = pmod (x, IMWD) / 8;
-  char cellwp = 7 - (x % 8);
+  char cellwp = 7 - (pmod (x, IMWD) % 8);
   uint16_t cellh = pmod(y, IMHT);
   // printf("Getting cell %d:%d, %d\n", cellw, cellwp, cellh);
 //   if ((*array)[cellw][cellh] != 0){
@@ -234,8 +233,6 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
 
   //Starting up and wait for tilting of the xCore-200 Explorer
   printf( "ProcessImage: Start, size = %dx%d\n", IMHT, IMWD );
-  printf( "Waiting for Board Tilt...\n" );
-  fromAcc :> int value;
 
   //Read in and do something with your image values..
   //This just inverts every pixel, but you should
@@ -283,7 +280,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
           (*ffinshed_p)[J] = 0;
         }
         fpause = 0;
-        if (I % 1 == 0){
+        if (I % 1000 == 0){
           printf("Finished iteration %d\n", I);
         }
         // printf("Ready to unpause workers\n");
