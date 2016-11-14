@@ -136,7 +136,8 @@ unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
 
 
 unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *unsafe fstart,
- char *unsafe fpause, char (*unsafe ffinshed)[WCOUNT], char *unsafe fstop, uint16_t (*unsafe startRows)[WCOUNT]){
+ char *unsafe fpause, char (*unsafe ffinshed)[WCOUNT], char *unsafe fstop,
+ uint16_t (*unsafe startRows)[WCOUNT], uint16_t (*unsafe rowCounts)[IMHT]){
 
   uint16_t startRow;
   uint16_t endRow;
@@ -226,6 +227,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
   char ffinshed[WCOUNT];
   char fstop = 0;
   uint16_t startRows[WCOUNT];
+  uint16_t rowCounts[IMHT];
 
   //unsafe pointers, eeek
   char (*unsafe array_p)[IMWD / 8][IMHT] = &array;
@@ -234,6 +236,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
   char (*unsafe ffinshed_p)[WCOUNT] = &ffinshed;
   char *unsafe fstop_p = &fstop;
   uint16_t (*unsafe startRows_p)[WCOUNT] = &startRows; 
+  uint16_t (*unsafe rowCounts_p)[IMHT] = &rowCounts;
 
   for(int I = 0; I < WCOUNT; I++){
     startRows[I] = I * IMHT / WCOUNT;
@@ -244,13 +247,13 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
 
   par{
     //create all the workers, and do some stuff as well in a sequential block
-    worker(array_p, 0, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p);
-    worker(array_p, 1, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p);
-    worker(array_p, 2, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p);
-    worker(array_p, 3, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p);
-    worker(array_p, 4, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p);
-    worker(array_p, 5, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p);
-    worker(array_p, 6, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p);
+    worker(array_p, 0, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p, rowCounts_p);
+    worker(array_p, 1, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p, rowCounts_p);
+    worker(array_p, 2, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p, rowCounts_p);
+    worker(array_p, 3, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p, rowCounts_p);
+    worker(array_p, 4, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p, rowCounts_p);
+    worker(array_p, 5, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p, rowCounts_p);
+    worker(array_p, 6, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p, rowCounts_p);
     {
       printf( "Loading...\n" );
       for( int y = 0; y < IMHT; y++ ) {   //go through all lines
