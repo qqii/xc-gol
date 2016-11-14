@@ -210,7 +210,7 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
 
     // printf("Worker %d finished iteration %d\n", wnumber, iteration);
     iteration++;
-    while((*ffinshed)[wnumber] || !*fpause){
+    while((*ffinshed)[wnumber] || *fpause){
       // if (wnumber == 0){
       //  printf("Worker %d waiting for next iteration\n", wnumber);
       // }
@@ -271,19 +271,19 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
         while (nfinished < WCOUNT){
           nfinished = 0;
           for(int J = 0; J < WCOUNT; J++){
-           // printf("Worker %d: %d\n", J, (*ffinshed_p)[J]);
-            nfinished += (*ffinshed_p)[J];
+           //printf("Worker %d: %d\n", J, (*ffinshed_p)[J]);
+            nfinished += ffinshed[J];
           }
         // printf("%d Workers Finished on iteration %d\n", nfinished, I);
         }
         //printf("%d Workers Finished on iteration %d\n", nfinished, I);
         fpause = 1;
-        print_world(array_p);
+        //print_world(array_p);
         for(int J = 0; J < WCOUNT; J++){
           (*ffinshed_p)[J] = 0;
         }
         fpause = 0;
-        if (I % 100 == 0){
+        if (I % 1 == 0){
           printf("Finished iteration %d\n", I);
         }
         // printf("Ready to unpause workers\n");
@@ -293,7 +293,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
       while (nfinished < WCOUNT){
         nfinished = 0;
         for(int J = 0; J < WCOUNT; J++){
-          nfinished += (*ffinshed_p)[J];
+          nfinished += ffinshed[J];
         }
       }
       printf("Finished last iteration\n");
