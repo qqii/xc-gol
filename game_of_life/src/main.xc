@@ -12,7 +12,7 @@
 #define  IMHT 16                  //image height
 #define  IMWD 16                //image width
 #define WCOUNT 7
-#define ITERATIONS 1
+#define ITERATIONS 100
 
 typedef unsigned char uchar;      //using uchar as shorthand
 
@@ -72,7 +72,7 @@ void DataInStream(chanend c_out)
 // Start your implementation by changing this function to implement the game of life
 // by farming out parts of the image to worker threads who implement it...
 // Currently the function just inverts the image
-//inline 
+//inline
 uint16_t pmod(uint16_t i, uint16_t n) {
   return (i % n + n) % n;
 }
@@ -86,6 +86,26 @@ unsafe unsigned char getVal(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
 //    printf("Cell %d:%d,%d is %d\n", cellw, cellwp, cellh, (*array)[cellw][cellh]);
 //   }
   return ((*array)[cellw][cellh] & (1<< cellwp)) >> cellwp;
+}
+
+unsafe void print_world(char (*unsafe array)[IMWD / 8][IMHT]) {
+  char alive = 219;
+  char dead = 176; // to 178
+
+  printf("world: %dx%d\n", IMWD, IMHT);
+  for (int r = 0; r < IMHT; r++) {
+    for (int c = 0; c < IMWD/8; c++) {
+      printf("%c%c%c%c%c%c%c%c", (*array)[c][r] & 0b10000000 ? alive : dead,
+                                 (*array)[c][r] & 0b01000000 ? alive : dead,
+                                 (*array)[c][r] & 0b00100000 ? alive : dead,
+                                 (*array)[c][r] & 0b00010000 ? alive : dead,
+                                 (*array)[c][r] & 0b00001000 ? alive : dead,
+                                 (*array)[c][r] & 0b00000100 ? alive : dead,
+                                 (*array)[c][r] & 0b00000010 ? alive : dead,
+                                 (*array)[c][r] & 0b00000001 ? alive : dead);
+    }
+    printf("\n");
+  }
 }
 
 unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
@@ -234,11 +254,12 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
           for( int w = 7; w >= 0; w--){
             unsigned char input = 0;
             c_in :> input;
-            number = number | ((input/255) << w); 
+            number = number | ((input/255) << w);
           }
           array[x][y] = number;
         }
       }
+      print_world(array_p);
 
       printf("Loading Complete\n");
       *fstart_p = 1;
@@ -254,6 +275,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
         }
         //printf("%d Workers Finished on iteration %d\n", nfinished, I);
         fpause = 1;
+        print_world(array_p);
         for(int J = 0; J < WCOUNT; J++){
           (*ffinshed_p)[J] = 0;
         }
@@ -274,7 +296,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
       printf("Finished last iteration\n");
       fstop = 1;
 
-
+      print_world(array_p);
       for( int y = 0; y < IMHT; y++ ) {   //go through all lines
         for( int x = 0; x < IMWD; x++ ) { //go through each pixel per line
           unsigned char output = 255 * getVal(array_p, x, y);
@@ -282,7 +304,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
         }
       }
     }
-  
+
   }
 }
 
@@ -310,7 +332,7 @@ void DataOutStream(chanend c_in)
       c_in :> line[ x ];
       printf( "-%4.1d ", line[ x ] ); //show image values
     }
-    
+
     _writeoutline( line, IMWD );
     printf( "\n" );
   }
