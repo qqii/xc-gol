@@ -136,7 +136,7 @@ unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
 
 
 unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *unsafe fstart,
- char *unsafe fpause, char (*unsafe ffinshed)[WCOUNT], char *unsafe fstop, char (*unsafe startRows)[WCOUNT]){
+ char *unsafe fpause, char (*unsafe ffinshed)[WCOUNT], char *unsafe fstop, uint16_t (*unsafe startRows)[WCOUNT]){
 
   uint16_t startRow;
   uint16_t endRow;
@@ -233,7 +233,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
   char *unsafe fpause_p = &fpause;
   char (*unsafe ffinshed_p)[WCOUNT] = &ffinshed;
   char *unsafe fstop_p = &fstop;
-  char (*unsafe startRows_p)[WCOUNT] = &startRows; 
+  uint16_t (*unsafe startRows_p)[WCOUNT] = &startRows; 
 
   for(int I = 0; I < WCOUNT; I++){
     startRows[I] = I * IMHT / WCOUNT;
