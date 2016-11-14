@@ -164,13 +164,23 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
         endRow = (*startRows)[wnumber + 1];
     }
 
+    if (startRow > 16){
+      printf("Worker %d sucks and has got a start row of %d\n", wnumber, startRow);
+    }
+
     for (uint16_t J = startRow; J <= endRow; J++){
       for(uint16_t I = 0; I < (IMWD / 8); I++){
         unsigned char data = 0;
+        uint16_t amount = 0;
         for(int8_t W = 0; W < 8; W++){
           unsigned char cell = update(strips, 8 * I + W, J);
           data = data | cell << (7 - W);
+          amount = amount + data;
         }
+
+        //update how many alive cells each row has
+        (*rowCounts)[J] = amount;
+
         //store the first row out of the way
         if (J == startRow){
           firstRow[I] = data;
@@ -203,6 +213,7 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
     //last could be written back earlier but whatever
     for(int I = 0; I < IMWD / 8; I++){
       (*strips)[I][endRow - 1] = wset[I][wset_mid];
+      // printf("Row: %d\n", startRow);
       (*strips)[I][startRow] = firstRow[I];
     }
     
@@ -240,6 +251,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
 
   for(int I = 0; I < WCOUNT; I++){
     startRows[I] = I * IMHT / WCOUNT;
+    printf("Worker %d starting at line %d\n", I, (*startRows_p)[I]);
   }
 
   //Starting up and wait for tilting of the xCore-200 Explorer
@@ -294,7 +306,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
         fpause = 0;
 
         //print sometimes, but rarely because it's super slow
-        if (I % 1000 == 0){
+        if (I % 1 == 0){
           printf("Finished iteration %d\n", I);
         }
       }
