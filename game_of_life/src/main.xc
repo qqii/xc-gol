@@ -149,8 +149,6 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
 
   (*ffinshed)[wnumber] = 0;
 
-  while (!*fstart){
-  }
 
   while(!*fstop){
     for (uint16_t J = startRow; J <= endRow; J++){
@@ -205,6 +203,7 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
     while((*ffinshed)[wnumber] || *fpause){
     }
   }
+  printf("Worker %d Stopping\n", wnumber);
 }
 
 unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
@@ -226,6 +225,23 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
   //Starting up and wait for tilting of the xCore-200 Explorer
   printf( "ProcessImage: Start, size = %dx%d\n", IMHT, IMWD );
 
+  printf( "Loading...\n" );
+  for( int y = 0; y < IMHT; y++ ) {   //go through all lines
+    for( int x = 0; x < IMWD / 8; x++ ) { //go through each pixel per line
+      unsigned char number = 0;
+      for( int w = 7; w >= 0; w--){ //go through all bits in a byte
+        unsigned char input = 0;
+        c_in :> input;
+        //bit wizardry (lite)
+        number = number | ((input/255) << w);
+      }
+      array[x][y] = number;
+    }
+  }
+  print_world(array_p);
+
+  printf("Loading Complete\n");
+
   par{
     //create all the workers, and do some stuff as well in a sequential block
     worker(array_p, 0, fstart_p, fpause_p, ffinshed_p, fstop_p);
@@ -236,23 +252,6 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
     worker(array_p, 5, fstart_p, fpause_p, ffinshed_p, fstop_p);
     worker(array_p, 6, fstart_p, fpause_p, ffinshed_p, fstop_p);
     {
-      printf( "Loading...\n" );
-      for( int y = 0; y < IMHT; y++ ) {   //go through all lines
-        for( int x = 0; x < IMWD / 8; x++ ) { //go through each pixel per line
-          unsigned char number = 0;
-          for( int w = 7; w >= 0; w--){ //go through all bits in a byte
-            unsigned char input = 0;
-            c_in :> input;
-            //bit wizardry (lite)
-            number = number | ((input/255) << w);
-          }
-          array[x][y] = number;
-        }
-      }
-      print_world(array_p);
-
-      printf("Loading Complete\n");
-      *fstart_p = 1;
 
       //do iterations. This handles all but the last one
       //when ITERATIONS == 1 this doesn't get run
@@ -293,6 +292,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
 
       //this will actually gracefully shut them down
       fstop = 1;
+      fstart = 1; //HACK
 
       //write the output to the writer thread
       print_world(array_p);
