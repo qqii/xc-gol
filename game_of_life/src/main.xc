@@ -77,27 +77,20 @@ uint16_t pmod(uint16_t i, uint16_t n) {
   return (i % n + n) % n;
 }
 
-unsigned char gol(unsigned char surr){
-  unsigned char count = 0;
-  while (surr != 0){
-    surr = surr & (surr - 1);
-    count += 1;
-  }
-  return count;
-}
-
 unsafe unsigned char getVal(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
   uint16_t cellw = pmod (x, IMWD) / 8;
   char cellwp = 7 - (x % 8);
   uint16_t cellh = pmod(y, IMHT);
   // printf("Getting cell %d:%d, %d\n", cellw, cellwp, cellh);
+//   if ((*array)[cellw][cellh] != 0){
+//    printf("Cell %d:%d,%d is %d\n", cellw, cellwp, cellh, (*array)[cellw][cellh]);
+//   }
   return ((*array)[cellw][cellh] & (1<< cellwp)) >> cellwp;
 }
 
 unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
   unsigned char alive = 0;
   unsigned char self = getVal(array, x, y);
-  return self + 1 % 2;
   alive += getVal(array, x - 1, y - 1);
   alive += getVal(array, x, y - 1);
   alive += getVal(array, x + 1, y - 1);
@@ -107,7 +100,10 @@ unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
   alive += getVal(array, x, y + 1);
   alive += getVal(array, x + 1, y + 1);
 
-  // printf("%d,%d: %d\n",x,y, alive);
+  if (self != 0){
+    // printf("%d, %d was 1 with %d neighbours\n", x, y, alive);
+  }
+  //return self;
 
   if (self && alive < 2){
     return 0;
@@ -128,10 +124,10 @@ unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
 
 
 unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *unsafe fstart, char *unsafe fpause, char (*unsafe ffinshed)[WCOUNT], char *unsafe fstop){
-  // unsigned char data;
-  // unsigned char result;
+  uint16_t startRow = wnumber * IMHT / WCOUNT;
+  uint16_t endRow = (wnumber + 1) * IMHT / WCOUNT;
   uint16_t wset_mid = 0;
-  uint16_t wset_loc = (wnumber * IMHT / WCOUNT);
+  unsigned char firstRow[IMWD / 8];
   unsigned char wset[IMWD / 8][2];
   int iteration = 0;
 
@@ -141,36 +137,53 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
     // printf("Worker %d waiting to start\n", wnumber);
   }
 
-
-  for(uint16_t K = 0; K < (IMWD / 8); K++){
-    wset[K][wset_mid] = (*strips)[K][wset_loc];
-    wset[K][wset_mid + 1] = (*strips)[K][pmod(wset_loc - 1, IMHT)];
-  }
-  // printf("Worker %d Wset row %d: %d\t%d\n",wnumber, 0, wset[0][0], wset[1][0]);
-  // printf("Worker %d Wset row %d: %d\t%d\n",wnumber, 1, wset[0][1], wset[1][1]);
-
   while(!*fstop){
-    // printf("Worker %d starting iteration\n", wnumber);
-    for (uint16_t J = 0 + (wnumber * IMHT / WCOUNT); J <= ((wnumber + 1) * IMHT / WCOUNT); J++){
+    // printf("Worker %d starting iteration %d\n", wnumber, iteration);
+    for (uint16_t J = startRow; J <= endRow; J++){
       for(uint16_t I = 0; I < (IMWD / 8); I++){
         unsigned char data = 0;
         for(int8_t W = 0; W < 8; W++){
           unsigned char cell = update(strips, 8 * I + W, J);
+          if (cell == 1){
+            // printf("Worker %d discovered cell that should be 1 at %d,%d\n", wnumber, 8*I + W, J);
+          }
           data = data | cell << (7 - W);
           //  printf("Worker %d checking cell %d:%d,%d\n", wnumber, I, W, J);
         }
-        wset[I][wset_mid] = data;
+        if (data != 0){
+          // printf("Char at %d,%d is %d\n", I, J, data);
+          // printf("Char was written to line %d of the working set\n", wset_mid);
+        }
+
+        if (J == startRow){
+          firstRow[I] = data;
+        }
+        else{
+          wset[I][wset_mid] = data;
+        }
       }
-      //write back the working set
-      for(uint16_t L = 0; L < IMWD / 8; L++){
-        (*strips)[L][pmod(wset_loc - 1, IMHT)] = wset[L][(wset_mid + 1) % 2];
-        wset[L][(wset_mid + 1) % 2] = 0;
+      //write back the working set sometimes
+      if (J > startRow){
+        wset_mid = (wset_mid + 1) % 2;
       }
-      wset_mid = (wset_mid + 1) % 2;
-      wset_loc = wset_loc + 1;
+      if (J > startRow + 1){
+        for(uint16_t L = 0; L < IMWD / 8; L++){
+          (*strips)[L][J - 1] = wset[L][wset_mid];
+        }
+      }
     }
     // printf("Worker %d almost finished iteration\n", wnumber);
     (*ffinshed)[wnumber] = 1;
+    while(!*ffinshed[pmod(wnumber - 1, WCOUNT)]){
+    }
+
+    //write the first and last rows
+    for(int I = 0; I < IMWD / 8; I++){
+      (*strips)[I][endRow - 1] = wset[I][wset_mid];
+      (*strips)[I][startRow] = firstRow[I];
+    }
+    wset_mid = 0;
+
     // printf("Worker %d finished iteration %d\n", wnumber, iteration);
     iteration++;
     while((*ffinshed)[wnumber] || !*fpause){
