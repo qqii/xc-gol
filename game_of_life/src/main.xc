@@ -225,7 +225,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc)
   char fpause = 1;
   char ffinshed[WCOUNT];
   char fstop = 0;
-  char startRows[WCOUNT];
+  uint16_t startRows[WCOUNT];
 
   //unsafe pointers, eeek
   char (*unsafe array_p)[IMWD / 8][IMHT] = &array;
