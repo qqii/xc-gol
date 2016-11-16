@@ -1,121 +1,61 @@
-#ifndef WORLD_H_
-#define WORLD_H_
+#ifndef _WORLD_H_
+#define _WORLD_H_
 
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 
-#define MAX_WORLD_HEIGHT 256
-#define MAX_WORLD_WIDTH 256
-#define MAX_WORLD_SIZE MAX_WORLD_HEIGHT*MAX_WORLD_WIDTH
+#include "constants.h"
 
+// index
 typedef struct Ix {
   uint16_t r;
   uint16_t c;
 } ix_t;
 
+// cellular world
 typedef struct World {
   ix_t bounds;
   uint8_t active;
-  uint8_t hash[2][MAX_WORLD_WIDTH][MAX_WORLD_HEIGHT/8];
+  uint8_t hash[2][IMWD][IMHT/8];
 } world_t;
 
-ix_t new_ix(uint16_t r, uint16_t c) {
-  ix_t ix = {r, c};
-  return ix;
-}
+// creates a new ix_t
+ix_t new_ix(uint16_t r, uint16_t c);
 
-world_t blank_w(ix_t bounds) {
-  world_t world;
+// create a blank word_t with all dead cells and hash 0 active
+world_t blank_w(ix_t bounds);
 
-  world.bounds = bounds;
-  world.active = 0;
-  for (int r = 0; r < world.bounds.r; r++) {
-    for (int c = 0; c < world.bounds.c/8; c++) {
-      world.hash[world.active][r][c] = 0b00000000;
-      world.hash[!world.active][r][c] = 0b00000000;
-    }
-  }
+world_t test16x16_w();
 
-  return world;
-}
+// prints an ix_t
+void print_ix(ix_t ix);
 
-//HELPER PRINT FUNCTIONS
-void print_ix(ix_t ix) {
-  printf("{%d, %d}", ix.r, ix.c);
-}
+// prints the active hash of the world
+void printworld_w(world_t world);
 
-void printworld_w(world_t world) {
-  char alive = 219;
-  char dead = 176; // to 178
+// checks if the active hash of the world is alive
+uint8_t isalive_w(world_t world, ix_t ix);
 
-  printf("world: ");
-  print_ix(world.bounds);
-  printf(" %d\n", world.active);
-  for (int r = 0; r < world.bounds.r; r++) {
-    for (int c = 0; c < world.bounds.c/8; c++) {
-      printf("%c%c%c%c%c%c%c%c", world.hash[world.active][r][c] & 0b10000000 ? alive : dead,
-                                 world.hash[world.active][r][c] & 0b01000000 ? alive : dead,
-                                 world.hash[world.active][r][c] & 0b00100000 ? alive : dead,
-                                 world.hash[world.active][r][c] & 0b00010000 ? alive : dead,
-                                 world.hash[world.active][r][c] & 0b00001000 ? alive : dead,
-                                 world.hash[world.active][r][c] & 0b00000100 ? alive : dead,
-                                 world.hash[world.active][r][c] & 0b00000010 ? alive : dead,
-                                 world.hash[world.active][r][c] & 0b00000001 ? alive : dead);
-    }
-    printf("\n");
-  }
-}
+// sets the hash for the inactive cell to be alive
+world_t setalive_w(world_t world, ix_t ix);
 
-uint8_t isalive_w(world_t world, ix_t ix) {
-  div_t i = div(ix.c, 8);
-  return (world.hash[world.active][ix.r][i.quot] & (0b10000000 >> i.rem)) >> (7 - i.rem);
-}
+// sets the hash for the inactive cell to be dead
+world_t setdead_w(world_t world, ix_t ix);
 
-world_t setalive_w(world_t world, ix_t ix) {
-  div_t i = div(ix.c, 8);
-  world.hash[!world.active][ix.r][i.quot] = world.hash[!world.active][ix.r][i.quot] | (0b10000000 >> i.rem);
-  return world;
-}
+// calls setalive_w or setdead_w depending on the alive argument
+world_t set_w(world_t world, ix_t ix, uint8_t alive);
 
-world_t setdead_w(world_t world, ix_t ix) {
-  div_t i = div(ix.c, 8);
-  world.hash[!world.active][ix.r][i.quot] = world.hash[!world.active][ix.r][i.quot] & ~(0b10000000 >> i.rem);
-  return world;
-}
+// flips the world hash
+world_t flip_w(world_t world);
 
-world_t set_w(world_t world, ix_t ix, uint8_t alive) {
-  if (alive) {
-    return setalive_w(world, ix);
-  } else {
-    return setdead_w(world, ix);
-  }
-}
+// returns the number of neighbours in the moore boundary of a cell in the
+// active hash
+uint8_t moore_neighbours_w(world_t world, ix_t ix);
 
-world_t flip_w(world_t world) {
-  world.active = !world.active;
-  return world;
-}
-
-
-
-uint8_t moore_neighbours_w(world_t world, ix_t ix) {
-  uint8_t i = 0;
-  i += isalive_w(world, new_ix((ix.r + world.bounds.r - 1) % world.bounds.r, (ix.c + world.bounds.c - 1) % world.bounds.c));
-  i += isalive_w(world, new_ix((ix.r + world.bounds.r - 1) % world.bounds.r, ix.c));
-  i += isalive_w(world, new_ix((ix.r + world.bounds.r - 1) % world.bounds.r, (ix.c + 1) % world.bounds.c));
-  i += isalive_w(world, new_ix(ix.r,                                         (ix.c + world.bounds.c - 1) % world.bounds.c));
-  i += isalive_w(world, new_ix(ix.r,                                         (ix.c + 1) % world.bounds.c));
-  i += isalive_w(world, new_ix((ix.r + 1) % world.bounds.r,                  (ix.c + world.bounds.c - 1) % world.bounds.c));
-  i += isalive_w(world, new_ix((ix.r + 1) % world.bounds.r,                  ix.c));
-  i += isalive_w(world, new_ix((ix.r + 1) % world.bounds.r,                  (ix.c + 1) % world.bounds.c));
-  return i;
-}
-
-uint8_t step_w(world_t world, ix_t ix) {
-  uint8_t neighbours = moore_neighbours_w(world, ix);
-
-  return neighbours == 3 || (neighbours == 2 && isalive_w(world, ix));
-}
+// returns the next iteratation of a cell in the active hash according to the
+// rules of game of life
+// if you wanted to change the rules, here would be the place to change it
+uint8_t step_w(world_t world, ix_t ix);
 
 #endif
