@@ -104,6 +104,7 @@ void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_timing)
   }
 
   c_timing <: STOP;
+  c_timing <: SHUTDOWN;
 
   printworld_w(world);
   printf("%d iterations ", STEP);

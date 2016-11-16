@@ -9,6 +9,6 @@
 #define IMWD 16
 
 // number of iterations to run
-#define STEP 1024
+#define STEP 1
 
 #endif
