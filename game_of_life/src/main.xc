@@ -7,14 +7,11 @@
 #include <platform.h>
 #include <xs1.h>
 
-#include "pgmIO.h"
 #include "i2c.h"
+#include "pgmIO.h"
 
+#include "constants.h"
 #include "world.h"
-
-#define IMHT 16                  //image height
-#define IMWD 16                  //image width
-#define STEP 1
 
 on tile[0]: port p_scl = XS1_PORT_1E;         //interface ports to orientation
 on tile[0]: port p_sda = XS1_PORT_1F;
@@ -208,8 +205,8 @@ int main(void) {
   par {
     on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10);     //server thread providing orientation data
     on tile[0]: orientation(i2c[0], c_control);            //client thread reading orientation data
-    on tile[0]: DataInStream("test.pgm", c_inIO);         //thread to read in a PGM image
-    on tile[0]: DataOutStream("testout.pgm", c_outIO);    //thread to write out a PGM image
+    on tile[0]: DataInStream(FILENAME_IN, c_inIO);         //thread to read in a PGM image
+    on tile[0]: DataOutStream(FILENAME_OUT, c_outIO);    //thread to write out a PGM image
     on tile[1]: distributor(c_inIO, c_outIO, c_control);  //thread to coordinate work on image
   }
 
