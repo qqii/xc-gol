@@ -117,27 +117,33 @@ unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
   char cellwp = 7 - (pmod (x, IMWD) % 8);
   uint16_t cellh = pmod(y, IMHT);
   unsigned char self = getVal(array, x, y);
+
+  uint16_t cellright = pmod(cellw + 1, IMWD/8);
+  uint16_t cellLeft = pmod(cellw - 1, IMWD/8);
+
+  uint16_t cellBelow = pmod(cellh + 1, IMHT);
+  uint16_t cellAbove = pmod(cellh - 1, IMHT);
   
   if (cellwp == 0){ 
-    data = (((*array)[cellw][pmod(cellh - 1, IMHT)] & (6>>(1))) << (1)) | //row above 
-                ((8*((*array)[cellw][pmod(cellh + 1, IMHT)] & (6>>(1)))) << (1)) | //row below 
-                ((64*((*array)[cellw][pmod(cellh, IMHT)] & (4>>(1))))) | //left and right
-                ((1*((*array)[pmod(cellw + 1, IMWD / 8)][pmod(cellh - 1, IMHT)] & 128)) >> 7) |
-                ((8*((*array)[pmod(cellw + 1, IMWD / 8)][pmod(cellh + 1, IMHT)] & 128)) >> 7) |
-                ((64*((*array)[pmod(cellw + 1, IMWD / 8)][pmod(cellh, IMHT)] & 128)) >> 7) ;
+    data = (((*array)[cellw][cellAbove] & (6>>(1))) << (1)) | //row above 
+                ((8*((*array)[cellw][cellBelow] & (6>>(1)))) << (1)) | //row below 
+                ((64*((*array)[cellw][cellh] & (4>>(1))))) | //left and right
+                ((1*((*array)[cellright][cellAbove] & 128)) >> 7) |
+                ((8*((*array)[cellright][cellBelow] & 128)) >> 7) |
+                ((64*((*array)[cellright][cellh] & 128)) >> 7) ;
   } 
   else if (cellwp == 7){ 
-    data = (((*array)[cellw][pmod(cellh - 1, IMHT)] & (3<<(cellwp - 1))) >> (cellwp - 1)) | //row above 
-                ((8*((*array)[cellw][pmod(cellh + 1, IMHT)] & (3<<(cellwp - 1)))) >> (cellwp - 1)) | //row below 
-                ((64*((*array)[cellw][pmod(cellh, IMHT)] & (1<<(cellwp - 1))) >> (cellwp - 1))) | //to the left and right 
-                ((4*((*array)[pmod(cellw - 1, IMWD / 8)][pmod(cellh - 1, IMHT)] & 1))) |
-                ((32*((*array)[pmod(cellw - 1, IMWD / 8)][pmod(cellh + 1, IMHT)] & 1))) |
-                ((128*((*array)[pmod(cellw - 1, IMWD / 8)][pmod(cellh, IMHT)] & 1))) ;
+    data = (((*array)[cellw][cellAbove] & (3<<(cellwp - 1))) >> (cellwp - 1)) | //row above 
+                ((8*((*array)[cellw][cellBelow] & (3<<(cellwp - 1)))) >> (cellwp - 1)) | //row below 
+                ((64*((*array)[cellw][cellh] & (1<<(cellwp - 1))) >> (cellwp - 1))) | //to the left and right 
+                ((4*((*array)[cellLeft][cellAbove] & 1))) |
+                ((32*((*array)[cellLeft][cellBelow] & 1))) |
+                ((128*((*array)[cellLeft][cellh] & 1))) ;
   } 
   else{ 
     //bit wizardry 
-    data = (((*array)[cellw][pmod(cellh - 1, IMHT)] & (7<<(cellwp - 1))) >> (cellwp - 1)) | //row above 
-                ((8*((*array)[cellw][pmod(cellh + 1, IMHT)] & (7<<(cellwp - 1)))) >> (cellwp - 1)) | //row below 
+    data = (((*array)[cellw][cellAbove] & (7<<(cellwp - 1))) >> (cellwp - 1)) | //row above 
+                ((8*((*array)[cellw][cellBelow] & (7<<(cellwp - 1)))) >> (cellwp - 1)) | //row below 
                 ((64*((*array)[cellw][cellh] & (2<<(cellwp)))) >> (cellwp)) |  //to the left 
                 ((64*((*array)[cellw][cellh] & (1<<(cellwp - 1)))) >> (cellwp - 1)); //to the right 
   }
