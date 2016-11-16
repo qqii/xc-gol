@@ -12,6 +12,7 @@
 
 #include "constants.h"
 #include "world.h"
+#include "timing.h"
 
 on tile[0]: port p_scl = XS1_PORT_1E;         //interface ports to orientation
 on tile[0]: port p_sda = XS1_PORT_1F;
@@ -67,9 +68,9 @@ void DataInStream(char infname[], chanend c_out) {
 // Currently the function just inverts the image
 //
 /////////////////////////////////////////////////////////////////////////////////////////
-void distributor(chanend c_in, chanend c_out, chanend fromAcc) {
+void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_timing) {
   uint8_t val;
-  world_t world = blank_w(new_ix(IMHT, IMWD));
+  world_t world = test16x16_w();// = blank_w(new_ix(IMHT, IMWD));
 
   // Starting up and wait for tilting of the xCore-200 Explorer
   printf("ProcessImage: Start, size = %dx%d\n", IMHT, IMWD);
@@ -87,8 +88,11 @@ void distributor(chanend c_in, chanend c_out, chanend fromAcc) {
     }
   }
 
+  printworld_w(flip_w(world));
+
+  c_timing <: START;
+
   world = flip_w(world);
-  printworld_w(world);
   for (int i = 0; i < STEP; i++) {
     for (int y = 0; y < IMHT; y++) {
       for (int x = 0; x < IMWD; x++) {
@@ -97,9 +101,12 @@ void distributor(chanend c_in, chanend c_out, chanend fromAcc) {
       }
     }
     world = flip_w(world);
-    printworld_w(world);
   }
 
+  c_timing <: STOP;
+
+  printworld_w(world);
+  printf("%d iterations ", STEP);
   for (int y = 0; y < IMHT; y++) {
     for (int x = 0; x < IMWD; x++) {
       if (isalive_w(world, new_ix(y, x))) {
@@ -200,14 +207,15 @@ int main(void) {
 
   //char infname[] = "test.pgm";      //put your input image path here
   //char outfname[] = "testout.pgm";  //put your output image path here
-  chan c_inIO, c_outIO, c_control;    //extend your channel definitions here
+  chan c_inIO, c_outIO, c_control, c_timing;    //extend your channel definitions here
 
   par {
     on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10);     //server thread providing orientation data
     on tile[0]: orientation(i2c[0], c_control);            //client thread reading orientation data
     on tile[0]: DataInStream(FILENAME_IN, c_inIO);         //thread to read in a PGM image
     on tile[0]: DataOutStream(FILENAME_OUT, c_outIO);    //thread to write out a PGM image
-    on tile[1]: distributor(c_inIO, c_outIO, c_control);  //thread to coordinate work on image
+    on tile[1]: distributor(c_inIO, c_outIO, c_control, c_timing);  //thread to coordinate work on image
+    on tile[1]: timing(c_timing);
   }
 
   return 0;
