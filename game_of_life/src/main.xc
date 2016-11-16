@@ -51,9 +51,9 @@ void DataInStream(chanend c_out)
     _readinline(line, IMWD);
     for (int x = 0; x < IMWD; x++) {
       c_out <: line[x];
-      // printf( "-%4.1d ", line[ x ] ); //show image values
+      printf( "-%4.1d ", line[ x ] ); //show image values
     }
-    // printf( "\n" );
+    printf( "\n" );
   }
 
   // Close PGM image file
@@ -100,19 +100,53 @@ unsafe void print_world(char (*unsafe array)[IMWD / 8][IMHT]) {
   }
 }
 
+unsigned char gol(unsigned char surr){ 
+  unsigned char count = 0; 
+  while (surr != 0){ 
+    surr = surr & (surr - 1); 
+    count += 1; 
+  } 
+  return count; 
+}
+
 //returns whether a given cell will be alive. Takes absolute XY coordianates
 unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
+  unsigned char data = 0;
   unsigned char alive = 0;
+  uint16_t cellw = pmod (x, IMWD) / 8;
+  char cellwp = 7 - (pmod (x, IMWD) % 8);
+  uint16_t cellh = pmod(y, IMHT);
   unsigned char self = getVal(array, x, y);
-  alive += getVal(array, x - 1, y - 1);
-  alive += getVal(array, x, y - 1);
-  alive += getVal(array, x + 1, y - 1);
-  alive += getVal(array, x - 1, y);
-  alive += getVal(array, x + 1, y);
-  alive += getVal(array, x - 1, y + 1);
-  alive += getVal(array, x, y + 1);
-  alive += getVal(array, x + 1, y + 1);
+  
+  if (cellwp == 0){ 
+    data = (((*array)[cellw][pmod(cellh - 1, IMHT)] & (6>>(1))) << (1)) | //row above 
+                ((8*((*array)[cellw][pmod(cellh + 1, IMHT)] & (6>>(1)))) << (1)) | //row below 
+                ((64*((*array)[cellw][pmod(cellh, IMHT)] & (4>>(1))))) | //left and right
+                ((1*((*array)[pmod(cellw + 1, IMWD / 8)][pmod(cellh - 1, IMHT)] & 128)) >> 7) |
+                ((8*((*array)[pmod(cellw + 1, IMWD / 8)][pmod(cellh + 1, IMHT)] & 128)) >> 7) |
+                ((64*((*array)[pmod(cellw + 1, IMWD / 8)][pmod(cellh, IMHT)] & 128)) >> 7) ;
+  } 
+  else if (cellwp == 7){ 
+    data = (((*array)[cellw][pmod(cellh - 1, IMHT)] & (3<<(cellwp - 1))) >> (cellwp - 1)) | //row above 
+                ((8*((*array)[cellw][pmod(cellh + 1, IMHT)] & (3<<(cellwp - 1)))) >> (cellwp - 1)) | //row below 
+                ((64*((*array)[cellw][pmod(cellh, IMHT)] & (1<<(cellwp - 1))) >> (cellwp - 1))) | //to the left and right 
+                ((4*((*array)[pmod(cellw - 1, IMWD / 8)][pmod(cellh - 1, IMHT)] & 1))) |
+                ((32*((*array)[pmod(cellw - 1, IMWD / 8)][pmod(cellh + 1, IMHT)] & 1))) |
+                ((128*((*array)[pmod(cellw - 1, IMWD / 8)][pmod(cellh, IMHT)] & 1))) ;
+  } 
+  else{ 
+    //bit wizardry 
+    data = (((*array)[cellw][pmod(cellh - 1, IMHT)] & (7<<(cellwp - 1))) >> (cellwp - 1)) | //row above 
+                ((8*((*array)[cellw][pmod(cellh + 1, IMHT)] & (7<<(cellwp - 1)))) >> (cellwp - 1)) | //row below 
+                ((64*((*array)[cellw][cellh] & (2<<(cellwp)))) >> (cellwp)) |  //to the left 
+                ((64*((*array)[cellw][cellh] & (1<<(cellwp - 1)))) >> (cellwp - 1)); //to the right 
+  }
 
+  alive = gol(data);
+  // if (alive > 0){
+  //   printf("%d,%d has %d live neighbours at %d\n", x, y, alive, data);
+  // }
+  
   if (self && alive < 2){
     return 0;
   }
@@ -327,11 +361,11 @@ void DataOutStream(chanend c_in) {
   for( int y = 0; y < IMHT; y++ ) {
     for( int x = 0; x < IMWD; x++ ) {
       c_in :> line[ x ];
-      // printf( "-%4.1d ", line[ x ] ); //show image values
+      printf( "-%4.1d ", line[ x ] ); //show image values
     }
 
     _writeoutline( line, IMWD );
-    // printf( "\n" );
+    printf( "\n" );
   }
 
   // Close the PGM image
