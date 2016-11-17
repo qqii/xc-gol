@@ -51,9 +51,9 @@ void DataInStream(chanend c_out)
     _readinline(line, IMWD);
     for (int x = 0; x < IMWD; x++) {
       c_out <: line[x];
-      printf( "-%4.1d ", line[ x ] ); //show image values
+      // printf( "-%4.1d ", line[ x ] ); //show image values
     }
-    printf( "\n" );
+    // printf( "\n" );
   }
 
   // Close PGM image file
@@ -67,27 +67,16 @@ void DataInStream(chanend c_out)
 // Start your implementation by changing this function to implement the game of life
 // by farming out parts of the image to worker threads who implement it...
 // Currently the function just inverts the image
-uint16_t pmod(uint16_t i, uint16_t n) {
-  return (i % n + n) % n;
-}
-
-//gets the value at an absolute XY coordianate
-unsafe unsigned char getVal(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
-  uint16_t cellw = pmod (x, IMWD) / 8;
-  char cellwp = 7 - (pmod (x, IMWD) % 8);
-  uint16_t cellh = pmod(y, IMHT);
-  return ((*array)[cellw][cellh] & (1<< cellwp)) >> cellwp;
-}
 
 //prints stuff
 unsafe void print_world(char (*unsafe array)[IMWD / 8][IMHT]) {
-  char alive = 219;
-  char dead = 176; // to 178
+  char* alive = "◼";
+  char* dead = "◻"; // to 178
 
   printf("world: %dx%d\n", IMWD, IMHT);
   for (int r = 0; r < IMHT; r++) {
     for (int c = 0; c < IMWD/8; c++) {
-      printf("%c%c%c%c%c%c%c%c", (*array)[c][r] & 0b10000000 ? alive : dead,
+      printf("%s %s %s %s %s %s %s %s ", (*array)[c][r] & 0b10000000 ? alive : dead,
                                  (*array)[c][r] & 0b01000000 ? alive : dead,
                                  (*array)[c][r] & 0b00100000 ? alive : dead,
                                  (*array)[c][r] & 0b00010000 ? alive : dead,
@@ -113,16 +102,31 @@ unsigned char gol(unsigned char surr){
 unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
   unsigned char data = 0;
   unsigned char alive = 0;
-  uint16_t cellw = pmod (x, IMWD) / 8;
-  char cellwp = 7 - (pmod (x, IMWD) % 8);
-  uint16_t cellh = pmod(y, IMHT);
-  unsigned char self = getVal(array, x, y);
+  uint16_t cellw = x / 8;
+  char cellwp = 7 - x % 8;
+  uint16_t cellh = y;
+  unsigned char self = ((*array)[cellw][cellh] & (1 << cellwp)) >> cellwp;
 
-  uint16_t cellright = pmod(cellw + 1, IMWD/8);
-  uint16_t cellLeft = pmod(cellw - 1, IMWD/8);
+  uint16_t cellright = cellw + 1;
+  uint16_t cellLeft = cellw - 1;
 
-  uint16_t cellBelow = pmod(cellh + 1, IMHT);
-  uint16_t cellAbove = pmod(cellh - 1, IMHT);
+  uint16_t cellBelow = cellh + 1;
+  uint16_t cellAbove = cellh - 1;
+
+  if (cellw == (IMWD / 8) - 1){
+    cellright = 0;
+  }
+  if (cellw == 0){
+    cellLeft = (IMWD / 8) - 1;
+  }
+
+  if (cellh == IMHT - 1){
+    cellBelow = 0;
+  }
+  if (cellh == 0){
+    cellAbove = IMHT - 1;
+  }
+
   
   if (cellwp == 0){ 
     data = (((*array)[cellw][cellAbove] & (6>>(1))) << (1)) | //row above 
@@ -149,9 +153,6 @@ unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
   }
 
   alive = gol(data);
-  // if (alive > 0){
-  //   printf("%d,%d has %d live neighbours at %d\n", x, y, alive, data);
-  // }
   
   if (self && alive < 2){
     return 0;
@@ -189,7 +190,7 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
   }
 
   while(!*fstop){
-    for (uint16_t J = startRow; J <= endRow; J++){
+    for (uint16_t J = startRow; J < endRow; J++){
       for(uint16_t I = 0; I < (IMWD / 8); I++){
         unsigned char data = 0;
         for(int8_t W = 0; W < 8; W++){
@@ -220,12 +221,20 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
     //say we've finished
     (*ffinshed)[wnumber] = 1;
 
-    //wait until the previous worker finishes so we can put in the first row
-    while(!(*ffinshed)[pmod(wnumber - 1, WCOUNT)]){
-    }
+    //wait until the previous worker has finished
+    //SCREW PMOD
+    if (wnumber == 0){
+        while(!(*ffinshed)[WCOUNT - 1]){
+        }
+      }
+      else{
+        while(!(*ffinshed)[wnumber - 1]){
+        }
+      }
 
     //write the first and last rows
     //last could be written back earlier but whatever
+    wset_mid = (wset_mid + 1) % 2;
     for(int I = 0; I < IMWD / 8; I++){
       (*strips)[I][endRow - 1] = wset[I][wset_mid];
       (*strips)[I][startRow] = firstRow[I];
@@ -338,7 +347,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_
       print_world(array_p);
       for( int y = 0; y < IMHT; y++ ) {   //go through all lines
         for( int x = 0; x < IMWD; x++ ) { //go through each pixel per line
-          unsigned char output = 255 * getVal(array_p, x, y);
+          unsigned char output = 255 * (((*array_p)[x/8][y] & (1 << (7 - x%8))) >> (7 - x%8));
           c_out <: (output);
         }
       }
@@ -367,11 +376,11 @@ void DataOutStream(chanend c_in) {
   for( int y = 0; y < IMHT; y++ ) {
     for( int x = 0; x < IMWD; x++ ) {
       c_in :> line[ x ];
-      printf( "-%4.1d ", line[ x ] ); //show image values
+      //printf( "-%4.1d ", line[ x ] ); //show image values
     }
 
     _writeoutline( line, IMWD );
-    printf( "\n" );
+    //printf( "\n" );
   }
 
   // Close the PGM image
