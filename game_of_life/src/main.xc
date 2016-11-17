@@ -172,9 +172,12 @@ unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
 }
 
 
-unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *unsafe fstart, char *unsafe fpause, char (*unsafe ffinshed)[WCOUNT], char *unsafe fstop){
-  uint16_t startRow = wnumber * IMHT / WCOUNT;
-  uint16_t endRow = (wnumber + 1) * IMHT / WCOUNT;
+unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *unsafe fstart,
+ char *unsafe fpause, char (*unsafe ffinshed)[WCOUNT], char *unsafe fstop,
+ uint16_t (*unsafe startRows)[WCOUNT], uint16_t (*unsafe rowCounts)[IMHT]){
+
+  uint16_t startRow;
+  uint16_t endRow;
   if (wnumber == (WCOUNT - 1)){
     endRow = IMHT;
   }
@@ -190,13 +193,27 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
   }
 
   while(!*fstop){
-    for (uint16_t J = startRow; J < endRow; J++){
+    startRow = (*startRows)[wnumber];
+    if (wnumber == WCOUNT - 1){
+        endRow = IMHT;
+    }
+    else{
+        endRow = (*startRows)[wnumber + 1];
+    }
+
+    for (uint16_t J = startRow; J <= endRow; J++){
       for(uint16_t I = 0; I < (IMWD / 8); I++){
         unsigned char data = 0;
+        uint16_t amount = 0;
         for(int8_t W = 0; W < 8; W++){
           unsigned char cell = update(strips, 8 * I + W, J);
           data = data | cell << (7 - W);
+          amount = amount + cell;
         }
+
+        //update how many alive cells each row has
+        (*rowCounts)[J] = amount;
+
         //store the first row out of the way
         if (J == startRow){
           firstRow[I] = data;
@@ -237,6 +254,7 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
     wset_mid = (wset_mid + 1) % 2;
     for(int I = 0; I < IMWD / 8; I++){
       (*strips)[I][endRow - 1] = wset[I][wset_mid];
+      // printf("Row: %d\n", startRow);
       (*strips)[I][startRow] = firstRow[I];
     }
 
@@ -260,6 +278,8 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_
   char fpause = 1;
   char ffinshed[WCOUNT];
   char fstop = 0;
+  uint16_t startRows[WCOUNT];
+  uint16_t rowCounts[IMHT];
 
   //unsafe pointers, eeek
   char (*unsafe array_p)[IMWD / 8][IMHT] = &array;
@@ -267,19 +287,25 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_
   char *unsafe fpause_p = &fpause;
   char (*unsafe ffinshed_p)[WCOUNT] = &ffinshed;
   char *unsafe fstop_p = &fstop;
+  uint16_t (*unsafe startRows_p)[WCOUNT] = &startRows; 
+  uint16_t (*unsafe rowCounts_p)[IMHT] = &rowCounts;
+
+  for(int I = 0; I < WCOUNT; I++){
+    startRows[I] = I * IMHT / WCOUNT;
+  }
 
   //Starting up and wait for tilting of the xCore-200 Explorer
   printf( "ProcessImage: Start, size = %dx%d\n", IMHT, IMWD );
 
   par{
     //create all the workers, and do some stuff as well in a sequential block
-    worker(array_p, 0, fstart_p, fpause_p, ffinshed_p, fstop_p);
-    worker(array_p, 1, fstart_p, fpause_p, ffinshed_p, fstop_p);
-    worker(array_p, 2, fstart_p, fpause_p, ffinshed_p, fstop_p);
-    worker(array_p, 3, fstart_p, fpause_p, ffinshed_p, fstop_p);
-    worker(array_p, 4, fstart_p, fpause_p, ffinshed_p, fstop_p);
-    worker(array_p, 5, fstart_p, fpause_p, ffinshed_p, fstop_p);
-    worker(array_p, 6, fstart_p, fpause_p, ffinshed_p, fstop_p);
+    worker(array_p, 0, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p, rowCounts_p);
+    worker(array_p, 1, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p, rowCounts_p);
+    worker(array_p, 2, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p, rowCounts_p);
+    worker(array_p, 3, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p, rowCounts_p);
+    worker(array_p, 4, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p, rowCounts_p);
+    worker(array_p, 5, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p, rowCounts_p);
+    worker(array_p, 6, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p, rowCounts_p);
     {
       printf( "Loading...\n" );
       for( int y = 0; y < IMHT; y++ ) {   //go through all lines
