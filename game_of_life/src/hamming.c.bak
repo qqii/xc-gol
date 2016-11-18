@@ -1,0 +1,19 @@
+#include <stdio.h>
+
+unsigned char gol(unsigned char surr){ 
+  unsigned char count = 0; 
+  while (surr != 0){ 
+    surr = surr & (surr - 1); 
+    count += 1; 
+  } 
+  return count; 
+}
+
+int main(){
+    for(int i = 0; i < 256; i++){
+        printf("%d,", gol(i));
+      if (i % 10 == 9){
+      printf("\n");
+      }
+    }
+}
