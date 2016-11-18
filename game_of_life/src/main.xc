@@ -476,7 +476,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_
         //each time we do
         for(int R = 1; R < IMHT; R++){
           currentCount = currentCount + rowCounts[R];
-          if (currentCount > (totalRows / WCOUNT)){
+          if (currentCount >= (totalRows / WCOUNT) + 1){
             startRows[currentWorker] = R;
             currentWorker++;
             currentCount = 0;
