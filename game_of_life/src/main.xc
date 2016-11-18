@@ -208,6 +208,8 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
     startRow = (*startRows)[wnumber];
     //see if our worker is even in use
     if (startRow != IMHT){
+
+      //set the end row
       if (wnumber == WCOUNT - 1){
           endRow = IMHT;
       }
@@ -215,10 +217,11 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
           endRow = (*startRows)[wnumber + 1];
       }
 
+      //iterate through the rows
       for (uint16_t J = startRow; J < endRow; J++){
+
         //see if we can cheat
         if (iteration != 0 && (*rowCounts)[J] == 0){
-          // printf("Worker %d cheating on line %d\n", wnumber, J);
           amount = 0;
           if (J == startRow){
             for(int R = 0; R < (IMWD / 8); R++){
@@ -405,9 +408,29 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_
         fpause = 1;
 
         //update the rows count to include nearby rows
-        for (int R = 0; R < IMHT; R++){
-          uint16_t rowAbove = R - 1;
-          uint16_t rowBelow = R + 1;
+        uint16_t totalRows = 0;
+
+        // update the row counts to mark adjacent rows
+        //do the top row
+        uint16_t rowBelow = 1;
+        uint16_t rowAbove = IMHT - 1;
+
+        if (rowCounts[0] == 1){
+          totalRows++;
+          if (rowCounts[rowAbove] == 0){
+            rowCounts[rowAbove] = 2;
+            totalRows++;
+          }
+          if (rowCounts[rowBelow] == 0){
+            rowCounts[rowBelow] = 2;
+            totalRows++;
+          }
+        }
+
+        //do the middle rows
+        for (int R = 1; R < IMHT - 1; R++){
+          rowAbove = R - 1;
+          rowBelow = R + 1;
           if (R == 0){
             rowAbove = IMHT - 1;
           }
@@ -416,27 +439,38 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_
           }
 
           if (rowCounts[R] == 1){
-            if (rowCounts[rowAbove] != 1){
+            totalRows++;
+            if (rowCounts[rowAbove] == 0){
               rowCounts[rowAbove] = 2;
+              totalRows++;
             }
-            if (rowCounts[rowBelow] != 1){
+            if (rowCounts[rowBelow] == 0){
               rowCounts[rowBelow] = 2;
+              totalRows++;
             }
+          }
+        }
+
+        //do the bottom row
+        rowAbove = IMHT - 2;
+        rowBelow = 0;
+
+        if (rowCounts[IMHT - 1] == 1){
+          totalRows++;
+          if (rowCounts[rowAbove] == 0){
+            rowCounts[rowAbove] = 2;
+            totalRows++;
+          }
+          if (rowCounts[rowBelow] == 0){
+            rowCounts[rowBelow] = 2;
+            totalRows++;
           }
         }
 
         //start of load balancing calculations
-        uint16_t totalRows = 0;
         uint16_t currentCount = 0;
         unsigned char currentWorker = 1;
 
-        //change the 2s to 1 to make calculations easier
-        for(int R = 0; R < IMHT; R++){
-          if (rowCounts[R] == 2){
-            rowCounts[R] = 1;
-            totalRows++;
-          }
-        }
 
         //scan through until we hit the average and assign a worker
         //each time we do
@@ -453,6 +487,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_
         if(currentWorker < WCOUNT){
           for(int W = currentWorker; W < WCOUNT; W++){
             if (startRows[W - 1] + (WCOUNT - W) > IMHT - 1){
+              //if we've run out of space just tell the workers to miss this round
               startRows[W] = IMHT;
             }
             else{
