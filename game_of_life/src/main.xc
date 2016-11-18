@@ -69,9 +69,10 @@ void DataInStream(chanend c_out)
 // Currently the function just inverts the image
 
 //prints stuff
-unsafe void print_world(char (*unsafe array)[IMWD / 8][IMHT], uint16_t (*unsafe counts)[IMHT]) {
+unsafe void print_world(char (*unsafe array)[IMWD / 8][IMHT], unsigned char (*unsafe counts)[IMHT], uint16_t (*unsafe workers)[WCOUNT]) {
   char* alive = "◼";
   char* dead = "◻"; // to 178
+  unsigned char nextWorker = 0;
 
   printf("world: %dx%d\n", IMWD, IMHT);
   for (int r = 0; r < IMHT; r++) {
@@ -85,7 +86,17 @@ unsafe void print_world(char (*unsafe array)[IMWD / 8][IMHT], uint16_t (*unsafe 
                                  (*array)[c][r] & 0b00000010 ? alive : dead,
                                  (*array)[c][r] & 0b00000001 ? alive : dead);
     }
-    printf(" %u\n", (*counts)[r]);
+    if ((*workers)[nextWorker] == r){
+      printf(" %u - Worker %u\n", (*counts)[r], nextWorker);
+      nextWorker++;
+    }
+    else{
+      printf(" %u\n", (*counts)[r]);
+    }
+  }
+
+  for(int I = nextWorker; I < WCOUNT; I++){
+    printf("Worker %d not working (starting at %d)\n", I, (*workers)[I]);
   }
 }
 
@@ -171,16 +182,12 @@ unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
   }
 }
 
-
 unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *unsafe fstart,
  char *unsafe fpause, char (*unsafe ffinshed)[WCOUNT], char *unsafe fstop,
- uint16_t (*unsafe startRows)[WCOUNT], uint16_t (*unsafe rowCounts)[IMHT]){
+ uint16_t (*unsafe startRows)[WCOUNT], unsigned char (*unsafe rowCounts)[IMHT]){
 
   uint16_t startRow;
   uint16_t endRow;
-
-  uint16_t rowBelow;
-  uint16_t rowAbove;
 
   uint16_t wset_mid = 0;
   unsigned char firstRow[IMWD / 8];
@@ -199,105 +206,114 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
 
   while(!*fstop){
     startRow = (*startRows)[wnumber];
-    if (wnumber == WCOUNT - 1){
-        endRow = IMHT;
-    }
-    else{
-        endRow = (*startRows)[wnumber + 1];
-    }
-
-    for (uint16_t J = startRow; J < endRow; J++){
-      rowAbove = J - 1;
-      rowBelow = J + 1;
-      if (J == 0){
-        rowAbove = IMHT - 1;
+    //see if our worker is even in use
+    if (startRow != IMHT){
+      if (wnumber == WCOUNT - 1){
+          endRow = IMHT;
       }
-      if (J == IMHT - 1){
-        rowBelow = 0;
-      }
-      //see if we can cheat
-      if (iteration != 0 && (*rowCounts)[J] == 0 && (*rowCounts)[rowBelow] == 0 && (*rowCounts)[rowAbove] == 0){
-        amount = 0;
-        if (J == startRow){
-          for(int R = 0; R < (IMWD / 8); R++){
-            firstRow[R] = 0;
-          }        
-        }
-        else{
-          for(int R = 0; R < (IMWD / 8); R++){
-            wset[R][wset_mid] = 0;
-          }        
-        }
-      }
-      //else do it properly
       else{
-        amount = 0;
-        for(uint16_t I = 0; I < (IMWD / 8); I++){
-          unsigned char data = 0;
-          for(int8_t W = 0; W < 8; W++){
-            unsigned char cell = update(strips, 8 * I + W, J);
-            data = data | cell << (7 - W);
-            amount = amount + cell;
-          }
+          endRow = (*startRows)[wnumber + 1];
+      }
 
-          //update how many alive cells each row has
-          // (*rowCounts)[J] = amount;
-
-          //store the first row out of the way
+      for (uint16_t J = startRow; J < endRow; J++){
+        //see if we can cheat
+        if (iteration != 0 && (*rowCounts)[J] == 0){
+          // printf("Worker %d cheating on line %d\n", wnumber, J);
+          amount = 0;
           if (J == startRow){
-            firstRow[I] = data;
+            for(int R = 0; R < (IMWD / 8); R++){
+              firstRow[R] = 0;
+            }        
+          }
+          else{
+            for(int R = 0; R < (IMWD / 8); R++){
+              wset[R][wset_mid] = 0;
+            }        
+          }
+        }
+        //else do it properly
+        else{
+          amount = 0;
+          for(uint16_t I = 0; I < (IMWD / 8); I++){
+            unsigned char data = 0;
+            for(int8_t W = 0; W < 8; W++){
+              unsigned char cell = update(strips, 8 * I + W, J);
+              data = data | cell << (7 - W);
+              amount = amount + cell;
+            }
+
+            //update how many alive cells each row has
+            // (*rowCounts)[J] = amount;
+
+            //store the first row out of the way
+            if (J == startRow){
+              firstRow[I] = data;
+            }
+            //write to the working set
+            else{
+              wset[I][wset_mid] = data;
+            }
+          }
+        }
+        if (amount > 0){
+          if (J == startRow){
+            firstCount = 1;
           }
           //write to the working set
           else{
-            wset[I][wset_mid] = data;
+            countQueue[wset_mid] = 1;
+          }
+        }
+        else{
+          if (J == startRow){
+            firstCount = 0;
+          }
+          //write to the working set
+          else{
+            countQueue[wset_mid] = 0;
+          }
+        }
+        //update which row in the working set is current
+        //Don't need to do it the first time because we haven't used it
+        if (J > startRow){
+          wset_mid = (wset_mid + 1) % 2;
+        }
+        
+        // write back the working set to the array, except the first and last rows
+        if (J > startRow + 1){
+          for(uint16_t L = 0; L < IMWD / 8; L++){
+            (*strips)[L][J - 1] = wset[L][wset_mid];
+            (*rowCounts)[J - 1] = countQueue[wset_mid];
           }
         }
       }
-      if (J == startRow){
-        firstCount = amount;
-      }
-      //write to the working set
-      else{
-        countQueue[countQueueMid] = amount;
-      }
-      //update which row in the working set is current
-      //Don't need to do it the first time because we haven't used it
-      if (J > startRow){
-        wset_mid = (wset_mid + 1) % 2;
-        countQueueMid = (countQueueMid + 1) % 2;
-      }
-      
-      // write back the working set to the array, except the first and last rows
-      if (J > startRow + 1){
-        for(uint16_t L = 0; L < IMWD / 8; L++){
-          (*strips)[L][J - 1] = wset[L][wset_mid];
-          (*rowCounts)[J - 1] = countQueue[countQueueMid];
-        }
-      }
-    }
-    //say we've finished
-    (*ffinshed)[wnumber] = 1;
+      //say we've finished
+      (*ffinshed)[wnumber] = 1;
 
-    //wait until the previous worker has finished
-    //SCREW PMOD
-    if (wnumber == 0){
-        while(!(*ffinshed)[WCOUNT - 1]){
+      //wait until the previous worker has finished
+      //SCREW PMOD
+      if (wnumber == 0){
+          while(!(*ffinshed)[WCOUNT - 1]){
+          }
         }
-      }
-      else{
-        while(!(*ffinshed)[wnumber - 1]){
+        else{
+          while(!(*ffinshed)[wnumber - 1]){
+          }
         }
-      }
 
-    //write the first and last rows
-    //last could be written back earlier but whatever
-    wset_mid = (wset_mid + 1) % 2;
-    countQueueMid = (countQueueMid + 1) % 2;
-    for(int I = 0; I < IMWD / 8; I++){
-      (*strips)[I][endRow - 1] = wset[I][wset_mid];
-      (*strips)[I][startRow] = firstRow[I];
-      (*rowCounts)[endRow - 1] = countQueue[countQueueMid];
+      //write the first and last rows
+      //last could be written back earlier but whatever
+      wset_mid = (wset_mid + 1) % 2;
+      countQueueMid = (countQueueMid + 1) % 2;
+      for(int I = 0; I < IMWD / 8; I++){
+        (*strips)[I][endRow - 1] = wset[I][wset_mid];
+        (*strips)[I][startRow] = firstRow[I];
+      }
+      (*rowCounts)[endRow - 1] = countQueue[wset_mid];
       (*rowCounts)[startRow] = firstCount;
+    }
+    else{
+      (*ffinshed)[wnumber] = 1;
     }
 
     //reset the working set pointer
@@ -312,6 +328,7 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
   }
 }
 
+
 unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_timing)
 {
   //data structure and flags
@@ -321,7 +338,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_
   char ffinshed[WCOUNT];
   char fstop = 0;
   uint16_t startRows[WCOUNT];
-  uint16_t rowCounts[IMHT];
+  unsigned char rowCounts[IMHT];
 
   for (int I = 0; I < IMHT; I++){
     rowCounts[I] = 0;
@@ -334,11 +351,10 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_
   char (*unsafe ffinshed_p)[WCOUNT] = &ffinshed;
   char *unsafe fstop_p = &fstop;
   uint16_t (*unsafe startRows_p)[WCOUNT] = &startRows; 
-  uint16_t (*unsafe rowCounts_p)[IMHT] = &rowCounts;
+  unsigned char (*unsafe rowCounts_p)[IMHT] = &rowCounts;
 
   for(int I = 0; I < WCOUNT; I++){
     startRows[I] = I * IMHT / WCOUNT;
-    printf("Worker %d starting on row %d\n", I, I * IMHT / WCOUNT);
   }
 
   //Starting up and wait for tilting of the xCore-200 Explorer
@@ -367,7 +383,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_
           array[x][y] = number;
         }
       }
-      print_world(array_p, rowCounts_p);
+      print_world(array_p, rowCounts_p, startRows_p);
 
       c_timing <: START;
 
@@ -387,6 +403,66 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_
         }
         //handbrake on
         fpause = 1;
+
+        //update the rows count to include nearby rows
+        for (int R = 0; R < IMHT; R++){
+          uint16_t rowAbove = R - 1;
+          uint16_t rowBelow = R + 1;
+          if (R == 0){
+            rowAbove = IMHT - 1;
+          }
+          if (R == IMHT - 1){
+            rowBelow = 0;
+          }
+
+          if (rowCounts[R] == 1){
+            if (rowCounts[rowAbove] != 1){
+              rowCounts[rowAbove] = 2;
+            }
+            if (rowCounts[rowBelow] != 1){
+              rowCounts[rowBelow] = 2;
+            }
+          }
+        }
+
+        //start of load balancing calculations
+        uint16_t totalRows = 0;
+        uint16_t currentCount = 0;
+        unsigned char currentWorker = 1;
+
+        //change the 2s to 1 to make calculations easier
+        for(int R = 0; R < IMHT; R++){
+          if (rowCounts[R] == 2){
+            rowCounts[R] = 1;
+            totalRows++;
+          }
+        }
+
+        //scan through until we hit the average and assign a worker
+        //each time we do
+        for(int R = 1; R < IMHT; R++){
+          currentCount = currentCount + rowCounts[R];
+          if (currentCount > (totalRows / WCOUNT)){
+            startRows[currentWorker] = R;
+            currentWorker++;
+            currentCount = 0;
+          }
+        }
+
+        //assign any workers we didn't do yet
+        if(currentWorker < WCOUNT){
+          for(int W = currentWorker; W < WCOUNT; W++){
+            if (startRows[W - 1] + (WCOUNT - W) > IMHT - 1){
+              startRows[W] = IMHT;
+            }
+            else{
+              startRows[W] = startRows[W - 1] + (WCOUNT - W);
+            }
+          }
+        }
+
+        //print_world(array_p, rowCounts_p, startRows_p);
+
         //unset the finished flags for all of them
         //so that they all go at the same time
         for(int J = 0; J < WCOUNT; J++){
@@ -417,7 +493,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_
       fstop = 1;
 
       //write the output to the writer thread
-      print_world(array_p, rowCounts_p);
+      print_world(array_p, rowCounts_p, startRows_p);
       for( int y = 0; y < IMHT; y++ ) {   //go through all lines
         for( int x = 0; x < IMWD; x++ ) { //go through each pixel per line
           unsigned char output = 255 * (((*array_p)[x/8][y] & (1 << (7 - x%8))) >> (7 - x%8));
