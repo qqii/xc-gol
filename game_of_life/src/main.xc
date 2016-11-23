@@ -378,7 +378,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_
 
   //unsafe pointers, eeek
   char (*unsafe array_p)[IMWD / 8][IMHT] = &array;
-  char *unsafe fstart_p = &fstart;
+  char volatile *unsafe fstart_p = &fstart;
   char *unsafe fpause_p = &fpause;
   char (*unsafe ffinshed_p)[WCOUNT] = &ffinshed;
   char *unsafe fstop_p = &fstop;
@@ -501,11 +501,12 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_
         unsigned char currentWorker = 1;
 
 
+
         //scan through until we hit the average and assign a worker
         //each time we do
         for(int R = 1; R < IMHT; R++){
           currentCount = currentCount + rowCounts[R];
-          if (currentCount >= (totalRows / WCOUNT) + 1){
+          if (currentCount >= ((totalRows + (WCOUNT - 1)) / WCOUNT)){
             startRows[currentWorker] = R;
             currentWorker++;
             currentCount = 0;
@@ -525,7 +526,6 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_
           }
         }
 
-        //print_world(array_p, rowCounts_p, startRows_p);
 
         //unset the finished flags for all of them
         //so that they all go at the same time
