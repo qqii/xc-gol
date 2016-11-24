@@ -11,7 +11,6 @@
 #include "pgmIO.h"
 
 #include "constants.h"
-#include "world.h"
 #include "timing.h"
 
 char hamming[256] = {
@@ -129,17 +128,8 @@ unsafe void print_world(char (*unsafe array)[IMWD / 8][IMHT], unsigned char (*un
   }
 }
 
-unsigned char gol(unsigned char surr){ 
-  unsigned char count = 0; 
-  while (surr != 0){ 
-    surr = surr & (surr - 1); 
-    count += 1; 
-  } 
-  return count; 
-}
-
 //returns whether a given cell will be alive. Takes absolute XY coordianates
-unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
+extern inline unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
   unsigned char data = 0;
   unsigned char alive = 0;
   uint16_t cellw = x / 8;
@@ -230,10 +220,14 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
   uint16_t amount = 0;
   (*ffinshed)[wnumber] = 0;
 
+  char* foo = "foo";
+
   while (!*fstart){
+    sprintf(foo, "%d", *fstart);
   }
 
   while(!*fstop){
+    sprintf(foo, "%d", (*startRows)[wnumber]);
     startRow = (*startRows)[wnumber];
     //see if our worker is even in use
     if (startRow != IMHT){
@@ -248,6 +242,7 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
 
       //iterate through the rows
       for (uint16_t J = startRow; J < endRow; J++){
+      sprintf(foo, "%d", (*rowCounts)[J]);
 
         //see if we can cheat
         if (iteration != 0 && (*rowCounts)[J] == 0){
@@ -255,11 +250,13 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
           if (J == startRow){
             for(int R = 0; R < (IMWD / 8); R++){
               firstRow[R] = 0;
+              sprintf(foo, "%d", (*strips)[R][J]);
             }        
           }
           else{
             for(int R = 0; R < (IMWD / 8); R++){
               wset[R][wset_mid] = 0;
+              sprintf(foo, "%d", (*strips)[R][J]);
             }        
           }
         }
@@ -269,6 +266,8 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
           for(uint16_t I = 0; I < (IMWD / 8); I++){
             unsigned char data = 0;
             for(int8_t W = 0; W < 8; W++){
+              if (I == 0 && J == 9 && W == 7){
+              }
               unsigned char cell = update(strips, 8 * I + W, J);
               data = data | cell << (7 - W);
               amount = amount + cell;
@@ -279,10 +278,12 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
 
             //store the first row out of the way
             if (J == startRow){
+              sprintf(foo, "%d", (*strips)[I][J]);
               firstRow[I] = data;
             }
             //write to the working set
             else{
+              sprintf(foo, "%d", (*strips)[I][J]);
               wset[I][wset_mid] = data;
             }
           }
@@ -325,13 +326,23 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
       //wait until the previous worker has finished
       //SCREW PMOD
       if (wnumber == 0){
-          while(!(*ffinshed)[WCOUNT - 1]){
-          }
+        while(!(*ffinshed)[WCOUNT - 1] || !(*ffinshed)[wnumber + 1]){
+          sprintf(foo, "%d", *ffinshed[WCOUNT - 1]);
+          sprintf(foo, "%d", *ffinshed[wnumber + 1]);
         }
-        else{
-          while(!(*ffinshed)[wnumber - 1]){
-          }
+      }
+      else if (wnumber == WCOUNT - 1){
+        while(!(*ffinshed)[wnumber - 1] || !(*ffinshed)[0]){
+          sprintf(foo, "%d", *ffinshed[wnumber - 1]);
+          sprintf(foo, "%d", *ffinshed[0]);
         }
+      }
+      else{
+        while(!(*ffinshed)[wnumber - 1] || !(*ffinshed)[wnumber + 1]){
+          sprintf(foo, "%d", *ffinshed[wnumber - 1]);
+          sprintf(foo, "%d", *ffinshed[wnumber + 1]);
+        }
+      }
 
       //write the first and last rows
       //last could be written back earlier but whatever
@@ -356,6 +367,7 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
 
     //wait until the coordinator gives the go ahead for another round
     while((*ffinshed)[wnumber] || *fpause){
+      sprintf(foo, "%d", *fpause);
     }
   }
 }
@@ -435,6 +447,14 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_
         }
         //handbrake on
         fpause = 1;
+
+        char* foo = "foo";
+
+        for(int R = 0; R < IMWD / 8; R++){
+          for(int C = 0; C < IMHT; C++){
+            sprintf(foo, "%d", (*array_p)[R][C]);
+          }
+        }
 
         //update the rows count to include nearby rows
         uint16_t totalRows = 0;
@@ -541,12 +561,14 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_
         for(int J = 0; J < WCOUNT; J++){
           (*ffinshed_p)[J] = 0;
         }
+
+        // print_world(array_p, rowCounts_p, startRows_p);
         fpause = 0;
 
         //print sometimes, but rarely because it's super slow
-        if (I % 1000 == 0){
-          // printf("Finished iteration %d\n", I);
-        }
+        // if (I % 1 == 0){
+        //   printf("Finished iteration %d\n", I);
+        // }
       }
 
       //check that they're all finished for the last iteration
