@@ -80,3 +80,44 @@ void ui(i2c_master_if client i2c, in port b, out port p, ui_if server s) {
     }
   }
 }
+
+void io(char infname[], char outfname[], chanend ch) {
+  int res;
+  uint8_t line[IMWD];
+
+  // Open PGM file
+  res = _openinpgm(infname, IMWD, IMHT);
+  if (res) {
+    printf("DataInStream: Error openening %s\n.", infname);
+    return;
+  }
+
+  // Read image line-by-line and send byte by byte to channel ch
+  for (int y = 0; y < IMHT; y++) {
+    _readinline(line, IMWD);
+    for (int x = 0; x < IMWD; x++) {
+      ch <: line[x];
+    }
+  }
+
+  _closeinpgm();
+
+  while (1) {
+    // Open PGM file
+    res = _openoutpgm(outfname, IMWD, IMHT);
+    if (res) {
+      printf("DataOutStream: Error opening %s\n.", outfname);
+      return;
+    }
+
+    // Compile each line of the image and write the image line-by-line
+    for (int y = 0; y < IMHT; y++) {
+      for (int x = 0; x < IMWD; x++) {
+        ch :> line[x];
+      }
+      _writeoutline(line, IMWD);
+    }
+
+    _closeoutpgm();
+  }
+}

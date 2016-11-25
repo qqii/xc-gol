@@ -9,6 +9,7 @@
 #define IMWD 16
 
 #define TILT_THRESHOLD 30
+#define UNTILT_THRESHOLD 10
 
 #define FXOS8700EQ_I2C_ADDR         0x1E  //register addresses for orientation
 #define FXOS8700EQ_XYZ_DATA_CFG_REG 0x0E

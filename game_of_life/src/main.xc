@@ -20,42 +20,13 @@ on tile[0]: port p_sda        = XS1_PORT_1F;
 on tile[0]: in   port p_buttons = XS1_PORT_4E; //port to access xCore-200 buttons
 on tile[0]: out  port p_leds    = XS1_PORT_4F; //port to access xCore-200 LEDs
 
-// Read Image from PGM file from path infname[] to channel c_out
-void DataInStream(char infname[], chanend c_out) {
-  int res;
-  uint8_t line[IMWD];
-  // printf("DataInStream: Start...\n");
-
-  // Open PGM file
-  res = _openinpgm(infname, IMWD, IMHT);
-  if (res) {
-    printf("DataInStream: Error openening %s\n.", infname);
-    return;
-  }
-
-  // Read image line-by-line and send byte by byte to channel c_out
-  for (int y = 0; y < IMHT; y++) {
-    _readinline(line, IMWD);
-    for (int x = 0; x < IMWD; x++) {
-      c_out <: line[x];
-      // printf( "-%4.1d ", line[ x ] ); //show image values
-    }
-    // printf( "\n" );
-  }
-
-  // Close PGM image file
-  _closeinpgm();
-  // printf( "DataInStream: Done...\n" );
-  return;
-}
-
 // Start your implementation by changing this function to implement the game of life
 // by farming out parts of the image to worker threads who implement it...
 // Currently the function just inverts the image
-void distributor(ui_if client c, chanend c_in, chanend c_out) {
+void distributor(ui_if client c, chanend ch) {
   uint8_t val;
   uint8_t D1 = 1;
-  world_t world = test16x16_w();// = blank_w(new_ix(IMHT, IMWD));
+  world_t world = blank_w(new_ix(IMHT, IMWD));
 
   // Starting up and wait for tilting of the xCore-200 Explorer
   printf("ProcessImage: Start, size = %dx%d\n", IMHT, IMWD);
@@ -65,7 +36,7 @@ void distributor(ui_if client c, chanend c_in, chanend c_out) {
   // printf("Processing...\n");
   for (int y = 0; y < IMHT; y++) {  // go through all lines
     for (int x = 0; x < IMWD; x++) {  // go through each pixel per line
-      c_in :> val;  // read the pixel value
+      ch :> val;  // read the pixel value
       world = set_w(world, new_ix(y, x), val);
     }
   }
@@ -99,15 +70,18 @@ void distributor(ui_if client c, chanend c_in, chanend c_out) {
           } else {
             val = 0;
           }
-          c_out <: val;
+          ch <: val;
         }
       }
     }
-    if (abs(c.getAccelerationX()) > TILT_THRESHOLD || abs(c.getAccelerationY()) > TILT_THRESHOLD) {
+    if (abs(c.getAccelerationX()) > TILT_THRESHOLD
+     || abs(c.getAccelerationY()) > TILT_THRESHOLD) {
       c.setLEDs(D1_r);
-      int alive = 0;
       printf("Iteration: %llu\n", i);
       printf("Elapsed Time (ns): %lu0\n", c.getElapsedTime());
+      // alive cells aren't stored anywhere, thus they need to be calculated when
+      // asked. this may cause some delay on larger boards
+      int alive = 0;
       for (int y = 0; y < IMHT; y++) {
         for (int x = 0; x < IMWD; x++) {
           if (isalive_w(world, new_ix(y, x))) {
@@ -116,39 +90,10 @@ void distributor(ui_if client c, chanend c_in, chanend c_out) {
         }
       }
       printf("Alive Cells: %d\n", alive);
-      while (abs(c.getAccelerationX()) > TILT_THRESHOLD || abs(c.getAccelerationY()) > TILT_THRESHOLD);
+      // wait until untilt
+      while (abs(c.getAccelerationX()) > UNTILT_THRESHOLD
+          || abs(c.getAccelerationY()) > UNTILT_THRESHOLD);
     }
-  }
-}
-
-
-// Write pixel stream from channel c_in to PGM image file
-void DataOutStream(char outfname[], chanend c_in) {
-  int res;
-  uint8_t line[IMWD];
-
-  while (1) {
-    // Open PGM file
-    // printf("DataOutStream: Start...\n");
-    res = _openoutpgm(outfname, IMWD, IMHT);
-    if (res) {
-      printf("DataOutStream: Error opening %s\n.", outfname);
-      return;
-    }
-
-    // Compile each line of the image and write the image line-by-line
-    for (int y = 0; y < IMHT; y++) {
-      for (int x = 0; x < IMWD; x++) {
-        c_in :> line[x];
-        // printf( "-%4.1d ", line[ x ] ); //show image values
-      }
-      _writeoutline(line, IMWD);
-      // printf( "DataOutStream: Line written...\n" );
-    }
-
-    // Close the PGM image
-    _closeoutpgm();
-    // printf("DataOutStream: Done...\n");
   }
 }
 
@@ -156,14 +101,13 @@ void DataOutStream(char outfname[], chanend c_in) {
 int main(void) {
   i2c_master_if i2c[1];               //interface to orientation
   ui_if c;
-  chan c_inIO, c_outIO;    //extend your channel definitions here
+  chan c_io;    //extend your channel definitions here
 
   par {
     on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10);     //server thread providing orientation data
-    on tile[0]: DataInStream(FILENAME_IN, c_inIO);         //thread to read in a PGM image
-    on tile[0]: DataOutStream(FILENAME_OUT, c_outIO);    //thread to write out a PGM image
     on tile[0]: ui(i2c[0], p_buttons, p_leds, c);
-    on tile[0]: distributor(c, c_inIO, c_outIO);  //thread to coordinate work on image
+    on tile[0]: io(FILENAME_IN, FILENAME_OUT, c_io);
+    on tile[0]: distributor(c, c_io);  //thread to coordinate work on image
   }
 
   return 0;
