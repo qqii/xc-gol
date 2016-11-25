@@ -16,17 +16,20 @@ const uint8_t D1_b = 0b0010;
 const uint8_t D1_g = 0b0100;
 const uint8_t D1_r = 0b1000;
 
-typedef interface IOInterface {
-  button_t getButtons();
+typedef interface UIInterface {
   int getAccelerationX();
   int getAccelerationY();
+  button_t getButtons();
   void setLEDs(uint8_t pattern);
-} io_i;
+  void startTimer();
+  uint32_t getElapsedTime();
+} ui_if;
 
-
-void io(i2c_master_if client i2c, in port b, out port p, io_i server s) {
+void ui(i2c_master_if client i2c, in port b, out port p, ui_if server s) {
   i2c_regop_res_t result;
   int r;
+  timer t;
+  uint32_t start = 0;
 
   // Configure FXOS8700EQ
   result =
@@ -44,6 +47,7 @@ void io(i2c_master_if client i2c, in port b, out port p, io_i server s) {
   while (1) {
     select {
       case s.getButtons() -> button_t bs:
+        // b when pinsneq(15) :> r;
         b :> r;
         switch (r) {
           case 13:
@@ -65,6 +69,13 @@ void io(i2c_master_if client i2c, in port b, out port p, io_i server s) {
         break;
       case s.getAccelerationY() -> int y:
         y = read_acceleration(i2c, FXOS8700EQ_OUT_Y_MSB);
+        break;
+      case s.startTimer():
+        t :> start;
+        break;
+      case s.getElapsedTime() -> uint32_t et:
+        t :> et;
+        et -= start;
         break;
     }
   }
