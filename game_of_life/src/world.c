@@ -23,6 +23,7 @@ world_t blank_w(ix_t bounds) {
   return world;
 }
 
+// returns the same world as test.pgm
 world_t test16x16_w() {
   world_t world = {
     {16, 16},

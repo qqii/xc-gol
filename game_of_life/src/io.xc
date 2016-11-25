@@ -11,6 +11,7 @@ void ui(i2c_master_if client i2c, in port b, out port p, ui_if server s) {
   timer t;
   uint32_t start = 0;
 
+  // setup tilt sensor
   // Configure FXOS8700EQ
   result =
       i2c.write_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_XYZ_DATA_CFG_REG, 0x01);
@@ -81,6 +82,7 @@ void io(char infname[], char outfname[], chanend ch) {
 
   _closeinpgm();
 
+  // TODO: graceful shutdown
   while (1) {
     // Open PGM file
     res = _openoutpgm(outfname, IMWD, IMHT);

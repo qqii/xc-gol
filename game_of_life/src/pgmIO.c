@@ -7,7 +7,6 @@
 FILE *_INFP = NULL;
 FILE *_OUTFP = NULL;
 
-/////////////////////////////////////////////////////////////////////////////////////////////
 //Line-wise pgm in:
 int _openinpgm(char fname[], int width, int height)
 {
@@ -67,7 +66,6 @@ int _closeinpgm()
 	return ret; //return zero for succes and EOF for fail
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////
 //Line-wise pgm out:
 int _openoutpgm(char fname[], int width, int height)
 {
@@ -120,7 +118,6 @@ int _closeoutpgm()
 	return ret; //return zero for succes and EOF for fail
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////
 //Standard pgm IO:
 
 //Input is a referenced array of unsigned chars of width and height and a
