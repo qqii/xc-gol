@@ -3,12 +3,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
-
 #include <platform.h>
 #include <xs1.h>
-
-#include "i2c.h"
-#include "pgmIO.h"
 
 #include "constants.h"
 #include "world.h"
@@ -29,7 +25,8 @@ void distributor(ui_if client c, chanend ch) {
   world_t world = blank_w(new_ix(IMHT, IMWD));
 
   // Starting up and wait for tilting of the xCore-200 Explorer
-  printf("ProcessImage: Start, size = %dx%d\n", IMHT, IMWD);
+  printf("%s -> %s\n%dx%d\nPress SW1 to load...\n", FILENAME_IN, FILENAME_OUT,
+                                                    IMHT, IMWD);
   while (c.getButtons() != SW1);
   c.setLEDs(D2);
 
@@ -73,12 +70,11 @@ void distributor(ui_if client c, chanend ch) {
           ch <: val;
         }
       }
-    }
-    if (abs(c.getAccelerationX()) > TILT_THRESHOLD
-     || abs(c.getAccelerationY()) > TILT_THRESHOLD) {
+    } else if (abs(c.getAccelerationX()) > TILT_THRESHOLD
+            || abs(c.getAccelerationY()) > TILT_THRESHOLD) {
       c.setLEDs(D1_r);
-      printf("Iteration: %llu\n", i);
-      printf("Elapsed Time (ns): %lu0\n", c.getElapsedTime());
+      printf("Iteration: %llu\t", i);
+      printf("Elapsed Time (ns): %lu0\t", c.getElapsedTime());
       // alive cells aren't stored anywhere, thus they need to be calculated when
       // asked. this may cause some delay on larger boards
       int alive = 0;

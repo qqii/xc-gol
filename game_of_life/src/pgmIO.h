@@ -1,9 +1,5 @@
-#ifndef PGMIO_H_
-#define PGMIO_H_
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#ifndef _PGMIO_H_
+#define _PGMIO_H_
 
 int _writepgm(unsigned char x[], int height, int width, char fname[]);
 int _readpgm(unsigned char x[], int height, int width, char fname[]);
@@ -16,4 +12,4 @@ int _openoutpgm(char fname[], int width, int height);
 int _writeoutline(unsigned char line[], int width);
 int _closeoutpgm();
 
-#endif /*PGMIO_H_*/
+#endif

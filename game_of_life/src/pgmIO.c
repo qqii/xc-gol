@@ -1,5 +1,9 @@
 #include "pgmIO.h"
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
 FILE *_INFP = NULL;
 FILE *_OUTFP = NULL;
 
