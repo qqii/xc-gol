@@ -99,20 +99,17 @@ void printworld_w(world_t world) {
 
 // world_t hashes are packed into bits, thus we need to extract them
 uint8_t isalive_w(world_t world, ix_t ix) {
-  div_t i = div(ix.c, 8);
-  return (world.hash[world.active][ix.r][i.quot] & (0b10000000 >> i.rem)) >> (7 - i.rem);
+  return (world.hash[world.active][ix.r][ix.c / 8] & (0b10000000 >> (ix.c % 8))) >> (7 - (ix.c % 8));
 }
 
 // set the inactive hash to make sure the world is kept in sync
 world_t setalive_w(world_t world, ix_t ix) {
-  div_t i = div(ix.c, 8);
-  world.hash[!world.active][ix.r][i.quot] = world.hash[!world.active][ix.r][i.quot] | (0b10000000 >> i.rem);
+  world.hash[!world.active][ix.r][ix.c / 8] = world.hash[!world.active][ix.r][ix.c / 8] | (0b10000000 >> (ix.c % 8));
   return world;
 }
 
 world_t setdead_w(world_t world, ix_t ix) {
-  div_t i = div(ix.c, 8);
-  world.hash[!world.active][ix.r][i.quot] = world.hash[!world.active][ix.r][i.quot] & ~(0b10000000 >> i.rem);
+  world.hash[!world.active][ix.r][ix.c / 8] = world.hash[!world.active][ix.r][ix.c / 8] & ~(0b10000000 >> (ix.c % 8));
   return world;
 }
 
