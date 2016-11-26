@@ -139,12 +139,9 @@ unsigned char gol(unsigned char surr){
 }
 
 //returns whether a given cell will be alive. Takes absolute XY coordianates
-unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
+unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], uint16_t cellw, uint16_t cellh, char cellwp){
   unsigned char data = 0;
   unsigned char alive = 0;
-  uint16_t cellw = x / 8;
-  char cellwp = 7 - x % 8;
-  uint16_t cellh = y;
   unsigned char self = ((*array)[cellw][cellh] & (1 << cellwp)) >> cellwp;
 
   uint16_t cellright = cellw + 1;
@@ -194,21 +191,7 @@ unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], int x, int y){
 
   alive = hamming[data];
   
-  if (self && alive < 2){
-    return 0;
-  }
-  else if (self && (alive == 2 || alive == 3)){
-    return 1;
-  }
-  else if (self && alive > 3){
-    return 0;
-  }
-  else if (!self && alive == 3){
-    return 1;
-  }
-  else{
-    return 0;
-  }
+  return alive == 3 || (alive == 2 && self);
 }
 
 unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *unsafe fstart,
@@ -269,7 +252,7 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
           for(uint16_t I = 0; I < (IMWD / 8); I++){
             unsigned char data = 0;
             for(int8_t W = 0; W < 8; W++){
-              unsigned char cell = update(strips, 8 * I + W, J);
+              unsigned char cell = update(strips,I, J, W);
               data = data | cell << (7 - W);
               amount = amount + cell;
             }
