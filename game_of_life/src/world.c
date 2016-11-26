@@ -1,5 +1,8 @@
 #include "world.h"
 
+#include <stdlib.h>
+#include <stdio.h>
+
 ix_t new_ix(uint16_t r, uint16_t c) {
   ix_t ix = {r, c};
   return ix;
@@ -20,6 +23,7 @@ world_t blank_w(ix_t bounds) {
   return world;
 }
 
+// returns the same world as test.pgm
 world_t test16x16_w() {
   world_t world = {
     {16, 16},

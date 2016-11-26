@@ -1,9 +1,7 @@
 #ifndef _WORLD_H_
 #define _WORLD_H_
 
-#include <stdlib.h>
 #include <stdint.h>
-#include <stdio.h>
 
 #include "constants.h"
 
