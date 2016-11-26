@@ -6,50 +6,110 @@
 #include <platform.h>
 #include <xs1.h>
 
+#include "i2c.h"
+#include "pgmIO.h"
 #include "constants.h"
 #include "world.h"
-#include "io.h"
 
 // interface ports to orientation
-on tile[0]: port p_scl        = XS1_PORT_1E;
-on tile[0]: port p_sda        = XS1_PORT_1F;
+on tile[0]: port p_scl = XS1_PORT_1E;
+on tile[0]: port p_sda = XS1_PORT_1F;
 //  both of these must be on port 0
 on tile[0]: in   port p_buttons = XS1_PORT_4E; //port to access xCore-200 buttons
 on tile[0]: out  port p_leds    = XS1_PORT_4F; //port to access xCore-200 LEDs
 
 // main concurrent thread
-unsafe void distributor(ui_if client c, chanend ch) {
+unsafe void distributor(chanend ori, chanend but) {
   uint8_t val;
-  uint8_t D1 = 1;
+  uint8_t D1 = 1; // green flash state
+  uint8_t line[IMWD];
+  timer t;
+  uint32_t start = 0;
+  uint32_t stop = 0;
   world_t world;
-  blank_w(&world, new_ix(IMHT, IMWD));
+  blank_w(&world);
 
-  printf("%s -> %s\n%dx%d\nPress SW1 to load...\n", FILENAME_IN, FILENAME_OUT,
-                                                    IMHT, IMWD);
+  printf("%s -> %s\n%dx%d\nPress SW1 to load...\n", FILENAME_IN, FILENAME_OUT, IMHT, IMWD);
+
   // wait for SW1
-  while (c.getButtons() != SW1);
-  c.setLEDs(D2);
+  but :> val;
+  p_leds <: D2;
 
-  for (int y = 0; y < IMHT; y++) {
-    for (int x = 0; x < IMWD; x++) {
-      ch :> val;  // read the pixel value
-      set_w(&world, new_ix(y, x), val);
+  // READ
+  val = _openinpgm(FILENAME_IN, IMWD, IMHT);
+  if (val) {
+    printf("DataInStream: Error openening %s\n.", FILENAME_IN);
+    return;
+  }
+  // Read image line-by-line and send byte by byte to channel ch
+  for (int y = 0; y < 10; y++) {
+    _readinline(line, IMWD);
+    for (int x = 0; x < 10; x++) {
+      set_w(&world, new_ix(y, x), line[x]);
     }
   }
-  flip_w(&world);
-  printworld_w(&world);
+  _closeinpgm();
 
-  c.startTimer();
-  // flip_w(world);
-  for (uintmax_t i = 0; 1; i++) {
-    // display green led
-    if (D1) {
-      c.setLEDs(D0);
-    } else {
-      c.setLEDs(D1_g);
+  // tumbler_w(&world, new_ix(4, 4));
+
+  flip_w(&world);
+
+  printworld_w(&world);
+  // printworldcode_w(&world, 1);
+
+  t :> start;
+  for (uintmax_t i = 0;; i++) {
+    select {
+      case ori :> val:
+        t :> stop;
+        p_leds <: D1_r;
+        printf("Iteration: %llu\t", i);
+        printf("Elapsed Time (ns): %lu0\t", stop - start);
+        int alive = 0;
+        for (int y = 0; y < IMHT; y++) {
+          for (int x = 0; x < IMWD; x++) {
+            if (isalive_w(&world, new_ix(y, x))) {
+              alive++;
+            }
+          }
+        }
+        printf("Alive Cells: %d\n", alive);
+        ori :> val;
+        break;
+      case but :> val:
+        p_leds <: D1_b;
+        printworld_w(&world);
+        // SAVE
+        val = _openoutpgm(FILENAME_OUT, IMWD, IMHT);
+        if (val) {
+          printf("DataOutStream: Error opening %s\n.", FILENAME_OUT);
+          return;
+        }
+        for (int y = 0; y < IMHT; y++) {
+          for (int x = 0; x < IMWD; x++) {
+            if (isalive_w(&world, new_ix(y, x))) {
+              line[x] = ~0;
+            } else {
+              line[x] = 0;
+            }
+          }
+          _writeoutline(line, IMWD);
+        }
+        _closeoutpgm();
+        break;
+      default:
+        switch (D1) {
+          case 0:
+            p_leds <: D0;
+            D1 = 1;
+            break;
+          case 1:
+            p_leds <: D1_g;
+            D1 = 0;
+            break;
+        }
+        break;
     }
-    // alternate on and off
-    D1 = !D1;
 
     // do work
     for (int y = 0; y < IMHT; y++) {
@@ -60,41 +120,73 @@ unsafe void distributor(ui_if client c, chanend ch) {
       }
     }
     flip_w(&world);
+    // printworld_w(world);
+  }
+}
 
-    // SW2 to write
-    if (c.getButtons() == SW2) {
-      c.setLEDs(D1_b);
-      printworld_w(&world);
-      for (int y = 0; y < IMHT; y++) {
-        for (int x = 0; x < IMWD; x++) {
-          if (isalive_w(&world, new_ix(y, x))) {
-            val = ~0;
-          } else {
-            val = 0;
-          }
-          ch <: val;
-        }
+// Initialise and  read orientation, send first tilt event to channel
+void orientation(client interface i2c_master_if i2c, chanend toDist) {
+  i2c_regop_res_t result;
+  char status_data = 0;
+  uint8_t tilted = 0;
+
+  // Configure FXOS8700EQ
+  result =
+      i2c.write_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_XYZ_DATA_CFG_REG, 0x01);
+  if (result != I2C_REGOP_SUCCESS) {
+    printf("I2C write reg failed\n");
+  }
+
+  // Enable FXOS8700EQ
+  result = i2c.write_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_CTRL_REG_1, 0x01);
+  if (result != I2C_REGOP_SUCCESS) {
+    printf("I2C write reg failed\n");
+  }
+
+  // Probe the orientation x-axis forever
+  while (1) {
+    // check until new orientation data is available
+    do {
+      status_data =
+          i2c.read_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_DR_STATUS, result);
+    } while (!status_data & 0x08);
+
+    // get new x-axis tilt value
+    int x = read_acceleration(i2c, FXOS8700EQ_OUT_X_MSB);
+
+    // send signal to distributor after first tilt
+    if (tilted) {
+      if (x < UNTILT_THRESHOLD) {
+        toDist <: tilted;
+        tilted = 0;
       }
     } else {
-      // tilt to pause and print infomation
-      if (abs(c.getAccelerationX()) > TILT_THRESHOLD || abs(c.getAccelerationY()) > TILT_THRESHOLD) {
-        c.setLEDs(D1_r);
-        printf("Iteration: %llu\t", i);
-        printf("Elapsed Time (ns): %lu0\t", c.getElapsedTime());
-        // alive cells aren't stored anywhere, thus they need to be calculated when asked
-        // this may cause some delay on larger boards
-        int alive = 0;
-        for (int y = 0; y < IMHT; y++) {
-          for (int x = 0; x < IMWD; x++) {
-            if (isalive_w(&world, new_ix(y, x))) {
-              alive++;
-            }
-          }
-        }
-        printf("Alive Cells: %d\n", alive);
-        // wait until untilt
-        while (abs(c.getAccelerationX()) > UNTILT_THRESHOLD || abs(c.getAccelerationY()) > UNTILT_THRESHOLD);
+      if (x > TILT_THRESHOLD) {
+        toDist <: tilted;
+        tilted = 1;
       }
+    }
+  }
+}
+
+void button(in port b, chanend toDist) {
+  uint8_t val;
+
+  // detect sw1 one time
+  while (1) {
+    b when pinseq(15)  :> val;
+    b when pinsneq(15) :> val;
+    if (val == SW1) {
+      toDist <: val;
+      break;
+    }
+  }
+  // detect subsiquent sw2
+  while (1) {
+    b when pinseq(15)  :> val;    // check that no button is pressed
+    b when pinsneq(15) :> val;    // check if some buttons are pressed
+    if (val == SW2) {
+      toDist <: val;
     }
   }
 }
@@ -102,17 +194,15 @@ unsafe void distributor(ui_if client c, chanend ch) {
 // Orchestrate concurrent system and start up all threads
 unsafe int main(void) {
   i2c_master_if i2c[1]; //interface to orientation
-  ui_if c;              // ui interface
-  chan c_io;            // io channel
+  chan c_ori, c_but;            // io channel
 
   par {
     on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10); // server thread providing orientation data
-    on tile[0]: ui(i2c[0], p_buttons, p_leds, c);     // all in one ui thread for buttons, leds and tilt
-    on tile[0]: io(FILENAME_IN, FILENAME_OUT, c_io);  // file io thread
-    on tile[1]: distributor(c, c_io);                 // thread to coordinate work on image
+    on tile[0]: orientation(i2c[0], c_ori);
+    on tile[0]: button(p_buttons, c_but);
+    on tile[0]: distributor(c_ori, c_but);                 // thread to coordinate work on image
   }
 
-  // currently the program will never stop, the io thread does not support graceful shutdown
-
+  // currently there is no graceful shutdown
   return 0;
 }
