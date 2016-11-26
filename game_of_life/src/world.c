@@ -97,55 +97,55 @@ void printworld_w(world_t world) {
   }
 }
 
-// world_t hashes are packed into bits, thus we need to extract them
-uint8_t isalive_w(world_t world, ix_t ix) {
-  return (world.hash[world.active][ix.r][ix.c / 8] & (0b10000000 >> (ix.c % 8))) >> (7 - (ix.c % 8));
-}
-
-// set the inactive hash to make sure the world is kept in sync
-world_t setalive_w(world_t world, ix_t ix) {
-  world.hash[!world.active][ix.r][ix.c / 8] = world.hash[!world.active][ix.r][ix.c / 8] | (0b10000000 >> (ix.c % 8));
-  return world;
-}
-
-world_t setdead_w(world_t world, ix_t ix) {
-  world.hash[!world.active][ix.r][ix.c / 8] = world.hash[!world.active][ix.r][ix.c / 8] & ~(0b10000000 >> (ix.c % 8));
-  return world;
-}
-
-world_t set_w(world_t world, ix_t ix, uint8_t alive) {
-  if (alive) {
-    return setalive_w(world, ix);
-  } else {
-    return setdead_w(world, ix);
-  }
-}
-
-world_t flip_w(world_t world) {
-  world.active = !world.active;
-  return world;
-}
-
-// doesn't use pmod since new_ix only takes uint8_t thus -1 will cause errors
-// instead of doing -1, we do +world.bounds.x-1 which is the same effect
-// this code is pretty slow and could be sped up using some if statements to
-// only perform the wrap when on the boundary
-uint8_t moore_neighbours_w(world_t world, ix_t ix) {
-  uint8_t i = 0;
-  i += isalive_w(world, new_ix((ix.r + world.bounds.r - 1) % world.bounds.r, (ix.c + world.bounds.c - 1) % world.bounds.c));
-  i += isalive_w(world, new_ix((ix.r + world.bounds.r - 1) % world.bounds.r, ix.c));
-  i += isalive_w(world, new_ix((ix.r + world.bounds.r - 1) % world.bounds.r, (ix.c + 1) % world.bounds.c));
-  i += isalive_w(world, new_ix(ix.r,                                         (ix.c + world.bounds.c - 1) % world.bounds.c));
-  i += isalive_w(world, new_ix(ix.r,                                         (ix.c + 1) % world.bounds.c));
-  i += isalive_w(world, new_ix((ix.r + 1) % world.bounds.r,                  (ix.c + world.bounds.c - 1) % world.bounds.c));
-  i += isalive_w(world, new_ix((ix.r + 1) % world.bounds.r,                  ix.c));
-  i += isalive_w(world, new_ix((ix.r + 1) % world.bounds.r,                  (ix.c + 1) % world.bounds.c));
-  return i;
-}
-
-// rules for game of life
-uint8_t step_w(world_t world, ix_t ix) {
-  uint8_t neighbours = moore_neighbours_w(world, ix);
-
-  return neighbours == 3 || (neighbours == 2 && isalive_w(world, ix));
-}
+// // world_t hashes are packed into bits, thus we need to extract them
+// uint8_t isalive_w(world_t world, ix_t ix) {
+//   return (world.hash[world.active][ix.r][ix.c / 8] & (0b10000000 >> (ix.c % 8))) >> (7 - (ix.c % 8));
+// }
+//
+// // set the inactive hash to make sure the world is kept in sync
+// world_t setalive_w(world_t world, ix_t ix) {
+//   world.hash[!world.active][ix.r][ix.c / 8] = world.hash[!world.active][ix.r][ix.c / 8] | (0b10000000 >> (ix.c % 8));
+//   return world;
+// }
+//
+// world_t setdead_w(world_t world, ix_t ix) {
+//   world.hash[!world.active][ix.r][ix.c / 8] = world.hash[!world.active][ix.r][ix.c / 8] & ~(0b10000000 >> (ix.c % 8));
+//   return world;
+// }
+//
+// world_t set_w(world_t world, ix_t ix, uint8_t alive) {
+//   if (alive) {
+//     return setalive_w(world, ix);
+//   } else {
+//     return setdead_w(world, ix);
+//   }
+// }
+//
+// world_t flip_w(world_t world) {
+//   world.active = !world.active;
+//   return world;
+// }
+//
+// // doesn't use pmod since new_ix only takes uint8_t thus -1 will cause errors
+// // instead of doing -1, we do +world.bounds.x-1 which is the same effect
+// // this code is pretty slow and could be sped up using some if statements to
+// // only perform the wrap when on the boundary
+// uint8_t moore_neighbours_w(world_t world, ix_t ix) {
+//   uint8_t i = 0;
+//   i += isalive_w(world, new_ix((ix.r + world.bounds.r - 1) % world.bounds.r, (ix.c + world.bounds.c - 1) % world.bounds.c));
+//   i += isalive_w(world, new_ix((ix.r + world.bounds.r - 1) % world.bounds.r, ix.c));
+//   i += isalive_w(world, new_ix((ix.r + world.bounds.r - 1) % world.bounds.r, (ix.c + 1) % world.bounds.c));
+//   i += isalive_w(world, new_ix(ix.r,                                         (ix.c + world.bounds.c - 1) % world.bounds.c));
+//   i += isalive_w(world, new_ix(ix.r,                                         (ix.c + 1) % world.bounds.c));
+//   i += isalive_w(world, new_ix((ix.r + 1) % world.bounds.r,                  (ix.c + world.bounds.c - 1) % world.bounds.c));
+//   i += isalive_w(world, new_ix((ix.r + 1) % world.bounds.r,                  ix.c));
+//   i += isalive_w(world, new_ix((ix.r + 1) % world.bounds.r,                  (ix.c + 1) % world.bounds.c));
+//   return i;
+// }
+//
+// // rules for game of life
+// uint8_t step_w(world_t world, ix_t ix) {
+//   uint8_t neighbours = moore_neighbours_w(world, ix);
+//
+//   return neighbours == 3 || (neighbours == 2 && isalive_w(world, ix));
+// }

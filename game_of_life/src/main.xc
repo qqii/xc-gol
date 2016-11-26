@@ -43,15 +43,16 @@ void distributor(chanend ori, chanend but) {
   for (int y = 0; y < IMHT; y++) {
     _readinline(line, IMWD);
     for (int x = 0; x < IMWD; x++) {
-      world = set_w(world, new_ix(y, x), line[x]);
+      SET_W(world, new_ix(y, x), line[x]);
     }
   }
   _closeinpgm();
-
-  printworld_w(flip_w(world));
+  FLIP_W(world);
+  printworld_w(world);
+  FLIP_W(world);
 
   t :> start;
-  world = flip_w(world);
+  FLIP_W(world);
   for (uintmax_t i = 0;; i++) {
     select {
       case ori :> val:
@@ -62,7 +63,7 @@ void distributor(chanend ori, chanend but) {
         int alive = 0;
         for (int y = 0; y < IMHT; y++) {
           for (int x = 0; x < IMWD; x++) {
-            if (isalive_w(world, new_ix(y, x))) {
+            if (ISALIVE_W(world, new_ix(y, x))) {
               alive++;
             }
           }
@@ -82,7 +83,7 @@ void distributor(chanend ori, chanend but) {
           }
           for (int y = 0; y < IMHT; y++) {
             for (int x = 0; x < IMWD; x++) {
-              if (isalive_w(world, new_ix(y, x))) {
+              if (ISALIVE_W(world, new_ix(y, x))) {
                 line[x] = ~0;
               } else {
                 line[x] = 0;
@@ -111,10 +112,10 @@ void distributor(chanend ori, chanend but) {
     for (int y = 0; y < IMHT; y++) {
       for (int x = 0; x < IMWD; x++) {
         ix_t ix = new_ix(y, x);
-        world = set_w(world, ix, step_w(world, ix));
+        SET_W(world, ix, STEP_W(world, ix));
       }
     }
-    world = flip_w(world);
+    FLIP_W(world);
   }
 }
 
@@ -168,8 +169,9 @@ void button(in port b, chanend toDist) {
 
   // detect sw1 one time
   while (1) {
-    b when pinseq(15)  :> val;
-    b when pinsneq(15) :> val;
+    b :> val;
+    // b when pinseq(15)  :> val;
+    // b when pinsneq(15) :> val;
     if (val == SW1) {
       toDist <: val;
       break;
@@ -177,8 +179,9 @@ void button(in port b, chanend toDist) {
   }
   // detect subsiquent sw2
   while (1) {
-    b when pinseq(15)  :> val;    // check that no button is pressed
-    b when pinsneq(15) :> val;    // check if some buttons are pressed
+    b :> val;
+    // b when pinseq(15)  :> val;    // check that no button is pressed
+    // b when pinsneq(15) :> val;    // check if some buttons are pressed
     if (val == SW2) {
       toDist <: val;
     }
