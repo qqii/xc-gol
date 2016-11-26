@@ -19,7 +19,7 @@ on tile[0]: in   port p_buttons = XS1_PORT_4E; //port to access xCore-200 button
 on tile[0]: out  port p_leds    = XS1_PORT_4F; //port to access xCore-200 LEDs
 
 // main concurrent thread
-void distributor(chanend ch) {
+void distributor(chanend ori, chanend but) {
   uint8_t val;
   uint8_t D1 = 1; // green flash state
   uint8_t line[IMWD];
@@ -30,13 +30,7 @@ void distributor(chanend ch) {
 
   printf("%s -> %s\n%dx%d\nPress SW1 to load...\n", FILENAME_IN, FILENAME_OUT, IMHT, IMWD);
   // wait for SW1
-  while (1) {
-    p_buttons when pinseq(15)  :> val;    // check that no button is pressed
-    p_buttons when pinsneq(15) :> val;    // check if some buttons are pressed
-    if (val == SW1) {
-      break;
-    }
-  }
+  but :> val;
   p_leds <: D2;
 
   // read
@@ -58,9 +52,9 @@ void distributor(chanend ch) {
 
   t :> start;
   world = flip_w(world);
-  for (uintmax_t i = 0; 1; i++) {
+  for (uintmax_t i = 0;; i++) {
     select {
-      case ch :> val:
+      case ori :> val:
         t :> stop;
         p_leds <: D1_r;
         printf("Iteration: %llu\t", i);
@@ -74,9 +68,9 @@ void distributor(chanend ch) {
           }
         }
         printf("Alive Cells: %d\n", alive);
-        ch :> val;
+        ori :> val;
         break;
-      case p_buttons when pinsneq(15) :> val:
+      case but :> val:
         // save
         if (val == SW2) {
           p_leds <: D1_b;
@@ -98,10 +92,8 @@ void distributor(chanend ch) {
           }
           _closeoutpgm();
         }
-        p_buttons when pinseq(15)  :> val;
         break;
       default:
-        // display green led
         switch (D1) {
           case 0:
             p_leds <: D0;
@@ -155,16 +147,15 @@ void orientation(client interface i2c_master_if i2c, chanend toDist) {
 
     // get new x-axis tilt value
     int x = read_acceleration(i2c, FXOS8700EQ_OUT_X_MSB);
-    // int y = read_acceleration(i2c, FXOS8700EQ_OUT_Y_MSB);
 
     // send signal to distributor after first tilt
     if (tilted) {
-      if (x*x < UNTILT_THRESHOLD * UNTILT_THRESHOLD) {
+      if (x < UNTILT_THRESHOLD) {
         toDist <: tilted;
         tilted = 0;
       }
     } else {
-      if (x*x > TILT_THRESHOLD * TILT_THRESHOLD) {
+      if (x > TILT_THRESHOLD) {
         toDist <: tilted;
         tilted = 1;
       }
@@ -172,15 +163,38 @@ void orientation(client interface i2c_master_if i2c, chanend toDist) {
   }
 }
 
+void button(in port b, chanend toDist) {
+  uint8_t val;
+
+  // detect sw1 one time
+  while (1) {
+    b when pinseq(15)  :> val;
+    b when pinsneq(15) :> val;
+    if (val == SW1) {
+      toDist <: val;
+      break;
+    }
+  }
+  // detect subsiquent sw2
+  while (1) {
+    b when pinseq(15)  :> val;    // check that no button is pressed
+    b when pinsneq(15) :> val;    // check if some buttons are pressed
+    if (val == SW2) {
+      toDist <: val;
+    }
+  }
+}
+
 // Orchestrate concurrent system and start up all threads
 int main(void) {
   i2c_master_if i2c[1]; //interface to orientation
-  chan c_ori;            // io channel
+  chan c_ori, c_but;            // io channel
 
   par {
     on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10); // server thread providing orientation data
     on tile[0]: orientation(i2c[0], c_ori);
-    on tile[0]: distributor(c_ori);                 // thread to coordinate work on image
+    on tile[0]: button(p_buttons, c_but);
+    on tile[0]: distributor(c_ori, c_but);                 // thread to coordinate work on image
   }
 
   // currently the program will never stop, the io thread does not support graceful shutdown
