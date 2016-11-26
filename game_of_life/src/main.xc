@@ -14,8 +14,12 @@
 #include "world.h"
 #include "timing.h"
 
-on tile[0]: port p_scl = XS1_PORT_1E;         //interface ports to orientation
+// interface ports to orientation
+on tile[0]: port p_scl = XS1_PORT_1E;
 on tile[0]: port p_sda = XS1_PORT_1F;
+//  both of these must be on port 0
+on tile[0]: in   port p_buttons = XS1_PORT_4E; //port to access xCore-200 buttons
+on tile[0]: out  port p_leds    = XS1_PORT_4F; //port to access xCore-200 LEDs
 
 #define FXOS8700EQ_I2C_ADDR 0x1E  //register addresses for orientation
 #define FXOS8700EQ_XYZ_DATA_CFG_REG 0x0E
@@ -188,13 +192,22 @@ void orientation(client interface i2c_master_if i2c, chanend toDist) {
 
     // get new x-axis tilt value
     int x = read_acceleration(i2c, FXOS8700EQ_OUT_X_MSB);
+    int y = read_acceleration(i2c, FXOS8700EQ_OUT_Y_MSB);
 
     // send signal to distributor after first tilt
-    if (!tilted) {
-      if (x > 30) {
-        tilted = 1 - tilted;
-        toDist <: 1;
-      }
+    switch (tilted) {
+      case 0:
+        if (abs(x) > 30 || abs(y) > 30) {
+          tilted = 1;
+          toDist <: 1;
+        }
+        break;
+      case 1:
+        if (abs(x) < 10 && abs(y) < 10) {
+          tilted = 0;
+          toDist <: 0;
+        }
+        break;
     }
   }
 }
