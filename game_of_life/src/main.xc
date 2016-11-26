@@ -26,7 +26,7 @@ void distributor(chanend ori, chanend but) {
   timer t;
   uint32_t start = 0;
   uint32_t stop = 0;
-  world_t world = blank_w(new_ix(IMHT, IMWD));
+  world_t world = blank_w();
 
   printf("%s -> %s\n%dx%d\nPress SW1 to load...\n", FILENAME_IN, FILENAME_OUT, IMHT, IMWD);
   // wait for SW1

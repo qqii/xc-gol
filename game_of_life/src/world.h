@@ -13,16 +13,15 @@ typedef struct Ix {
 
 // cellular world
 typedef struct World {
-  ix_t bounds;
   uint8_t active;
-  uint8_t hash[2][IMWD][IMHT/8];
+  uint8_t hash[2][IMHT][IMWD/8];
 } world_t;
 
 // creates a new ix_t
 ix_t new_ix(uint16_t r, uint16_t c);
 
 // create a blank word_t with all dead cells and hash 0 active
-world_t blank_w(ix_t bounds);
+world_t blank_w();
 
 world_t test16x16_w();
 
