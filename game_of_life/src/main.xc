@@ -33,25 +33,29 @@ void distributor(chanend ori, chanend but) {
   but :> val;
   p_leds <: D2;
 
-  // read
+  // READ
   val = _openinpgm(FILENAME_IN, IMWD, IMHT);
   if (val) {
     printf("DataInStream: Error openening %s\n.", FILENAME_IN);
     return;
   }
   // Read image line-by-line and send byte by byte to channel ch
-  for (int y = 0; y < IMHT; y++) {
+  for (int y = 0; y < 10; y++) {
     _readinline(line, IMWD);
-    for (int x = 0; x < IMWD; x++) {
+    for (int x = 0; x < 10; x++) {
       world = set_w(world, new_ix(y, x), line[x]);
     }
   }
   _closeinpgm();
 
-  printworld_w(flip_w(world));
+  // world = tumbler_w(world, new_ix(4, 4));
+
+  world = flip_w(world);
+
+  printworld_w(world);
+  // printworldcode_w(world, 1);
 
   t :> start;
-  world = flip_w(world);
   for (uintmax_t i = 0;; i++) {
     select {
       case ori :> val:
@@ -71,27 +75,25 @@ void distributor(chanend ori, chanend but) {
         ori :> val;
         break;
       case but :> val:
-        // save
-        if (val == SW2) {
-          p_leds <: D1_b;
-          printworld_w(world);
-          val = _openoutpgm(FILENAME_OUT, IMWD, IMHT);
-          if (val) {
-            printf("DataOutStream: Error opening %s\n.", FILENAME_OUT);
-            return;
-          }
-          for (int y = 0; y < IMHT; y++) {
-            for (int x = 0; x < IMWD; x++) {
-              if (isalive_w(world, new_ix(y, x))) {
-                line[x] = ~0;
-              } else {
-                line[x] = 0;
-              }
-            }
-            _writeoutline(line, IMWD);
-          }
-          _closeoutpgm();
+        p_leds <: D1_b;
+        printworld_w(world);
+        // SAVE
+        val = _openoutpgm(FILENAME_OUT, IMWD, IMHT);
+        if (val) {
+          printf("DataOutStream: Error opening %s\n.", FILENAME_OUT);
+          return;
         }
+        for (int y = 0; y < IMHT; y++) {
+          for (int x = 0; x < IMWD; x++) {
+            if (isalive_w(world, new_ix(y, x))) {
+              line[x] = ~0;
+            } else {
+              line[x] = 0;
+            }
+          }
+          _writeoutline(line, IMWD);
+        }
+        _closeoutpgm();
         break;
       default:
         switch (D1) {
@@ -115,6 +117,7 @@ void distributor(chanend ori, chanend but) {
       }
     }
     world = flip_w(world);
+    // printworld_w(world);
   }
 }
 
