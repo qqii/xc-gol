@@ -40,15 +40,15 @@ void distributor(chanend ori, chanend but) {
     return;
   }
   // Read image line-by-line and send byte by byte to channel ch
-  for (int y = 0; y < 10; y++) {
+  for (int y = 0; y < IMHT; y++) {
     _readinline(line, IMWD);
-    for (int x = 0; x < 10; x++) {
+    for (int x = 0; x < IMWD; x++) {
       world = set_w(world, new_ix(y, x), line[x]);
     }
   }
   _closeinpgm();
 
-  // world = tumbler_w(world, new_ix(4, 4));
+  // world = block_w(world, new_ix(1, 1));
 
   world = flip_w(world);
 
@@ -199,6 +199,60 @@ int main(void) {
     on tile[0]: button(p_buttons, c_but);
     on tile[0]: distributor(c_ori, c_but);                 // thread to coordinate work on image
   }
+
+//
+//   #define W 33
+//   #define H 33
+//
+//   // bits bitarray[H][BITNSLOTS(W)];
+//   bits bitarray[BITNSLOTSM(H, W)];
+//   timer t;
+//   uint32_t start;
+//   uint32_t stop;
+//
+//   for (int i = 0; i < H; i++) {
+//     for (int j = 0; j < H; j++) {
+//       BITCLEARM(bitarray, i, j, H);
+//     }
+//   }
+//
+//   t :> start;
+//   t :> stop;
+//
+//   printf("%d0\n", stop - start);
+//   printf("%d, %d\n", sizeof(bits), 8);
+//   // for (int i = 0, x = 0; i < 33; i++) {
+//   //   for (int j = 0; j < 33; j++, x++) {
+//   //     if (x % 2 == 0) {
+//   //       BITSETM(bitarray, i, j, H);
+//   //     }
+//   //   }
+//   // }
+//
+//   for (int i = 0; i < H; i++) {
+//     for (int j = 0; j < W; j++) {
+//       if (BITTESTM(bitarray, i, j, H)) {
+//         BITCLEARM(bitarray, i, j, H);
+//       } else {
+//         BITSETM(bitarray, i, j, H);
+//       }
+//     }
+//   }
+//
+//   for (int i = 0; i < 32; i++) {
+//     BITCLEARM(bitarray, 0,   i,   H);
+//     BITCLEARM(bitarray, i+1, 0,   H);
+//     BITCLEARM(bitarray, i,   32,  H);
+//     BITCLEARM(bitarray, 32,  i+1, H);
+//   }
+//
+//   for (int i = 0; i < H; i++) {
+//     for (int j = 0; j < W; j++) {
+//       printf("%c", BITTESTM(bitarray, i, j, H) == 0 ? 219 : 176);
+//     }
+//     printf("\n");
+//   }
+//   BITTESTM(bitarray, 32, 32+7, H);
 
   // currently the program will never stop, the io thread does not support graceful shutdown
 

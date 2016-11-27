@@ -12,11 +12,9 @@ world_t blank_w() {
   world_t world;
 
   world.active = 0;
-  for (int r = 0; r < IMHT; r++) {
-    for (int c = 0; c < IMWD/8; c++) {
-      world.hash[world.active][r][c] = 0b00000000;
-      world.hash[!world.active][r][c] = 0b00000000;
-    }
+  for (int i = 0; i < BITNSLOTSM(IMHT, IMWD); i++) {
+    world.hash[0][i] = 0b00000000;
+    world.hash[1][i] = 0b00000000;
   }
 
   return world;
@@ -34,15 +32,8 @@ void printworld_w(world_t world) {
   print_ix(new_ix(IMHT, (IMWD/8)*8)); // print_ix doesn't print a newline
   printf(" %d\n", world.active);
   for (int r = 0; r < IMHT; r++) {
-    for (int c = 0; c < IMWD/8; c++) {
-      printf("%c%c%c%c%c%c%c%c", world.hash[world.active][r][c] & 0b10000000 ? alive : dead,
-                                 world.hash[world.active][r][c] & 0b01000000 ? alive : dead,
-                                 world.hash[world.active][r][c] & 0b00100000 ? alive : dead,
-                                 world.hash[world.active][r][c] & 0b00010000 ? alive : dead,
-                                 world.hash[world.active][r][c] & 0b00001000 ? alive : dead,
-                                 world.hash[world.active][r][c] & 0b00000100 ? alive : dead,
-                                 world.hash[world.active][r][c] & 0b00000010 ? alive : dead,
-                                 world.hash[world.active][r][c] & 0b00000001 ? alive : dead);
+    for (int c = 0; c < IMWD; c++) {
+      printf("%c", BITTESTM(world.hash[world.active], r, c, IMHT) ? alive : dead);
     }
     printf("\n");
   }
@@ -62,31 +53,29 @@ void printworldcode_w(world_t world, uint8_t onlyalive) {
 
 // world_t hashes are packed into bits, thus we need to extract them
 uint8_t isalive_w(world_t world, ix_t ix) {
-  return (world.hash[world.active][ix.r][ix.c / 8] & (0b00000001 << (ix.c & 7)));
+  return BITTESTM(world.hash[world.active], ix.r, ix.c, IMHT) >> ((ix.r*IMHT+ix.c) & (BIT_SIZE - 1));
 }
-
-// (1 << ((b) % BIT_SIZE))
 
 // set the inactive hash to make sure the world is kept in sync
 inline world_t setalive_w(world_t world, ix_t ix) {
-  world.hash[!world.active][ix.r][ix.c / 8] = world.hash[!world.active][ix.r][ix.c / 8] | (0b10000000 >> (ix.c & 7));
+  world.hash[!world.active][BITSLOTM(ix.r, ix.c, IMHT)] |= BITMASKM(ix.r, ix.c, IMHT);
   return world;
 }
 
 inline world_t setdead_w(world_t world, ix_t ix) {
-  world.hash[!world.active][ix.r][ix.c / 8] = world.hash[!world.active][ix.r][ix.c / 8] & ~(0b10000000 >> (ix.c & 7));
+  world.hash[!world.active][BITSLOTM(ix.r, ix.c, IMHT)] &= ~BITMASKM(ix.r, ix.c, IMHT);
   return world;
 }
 
 world_t set_w(world_t world, ix_t ix, uint8_t alive) {
   if (alive) {
-    world.hash[!world.active][ix.r][ix.c / 8] = world.hash[!world.active][ix.r][ix.c / 8] | (0b10000000 >> (ix.c & 7));
-    return world;
     // return setalive_w(world, ix);
-  } else {
-    world.hash[!world.active][ix.r][ix.c / 8] = world.hash[!world.active][ix.r][ix.c / 8] & ~(0b10000000 >> (ix.c & 7));
+    world.hash[!world.active][BITSLOTM(ix.r, ix.c, IMHT)] |= BITMASKM(ix.r, ix.c, IMHT);
     return world;
+  } else {
     // return setdead_w(world, ix);
+    world.hash[!world.active][BITSLOTM(ix.r, ix.c, IMHT)] &= ~BITMASKM(ix.r, ix.c, IMHT);
+    return world;
   }
 }
 
@@ -99,7 +88,7 @@ world_t flip_w(world_t world) {
 // instead of doing -1, we do +world.bounds.x-1 which is the same effect
 // this code is pretty slow and could be sped up using some if statements to
 // only perform the wrap when on the boundary
-uint8_t moore_neighbours_w(world_t world, ix_t ix) {
+uint8_t mooreneighbours_w(world_t world, ix_t ix) {
   uint8_t i = 0;
   i += isalive_w(world, new_ix((ix.r + IMHT - 1) % IMHT, (ix.c + IMWD - 1) % IMWD));
   i += isalive_w(world, new_ix((ix.r + IMHT - 1) % IMHT, ix.c));
@@ -114,7 +103,7 @@ uint8_t moore_neighbours_w(world_t world, ix_t ix) {
 
 // rules for game of life
 uint8_t step_w(world_t world, ix_t ix) {
-  uint8_t neighbours = moore_neighbours_w(world, ix);
+  uint8_t neighbours = mooreneighbours_w(world, ix);
 
   return neighbours == 3 || (neighbours == 2 && isalive_w(world, ix));
 }
