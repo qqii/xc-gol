@@ -167,27 +167,30 @@ unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], uint16_t cellw
 
   
   if (cellwp == 0){ 
-    data = (((*array)[cellw][cellAbove] & (6>>(1))) << (1)) | //row above 
-                ((8*((*array)[cellw][cellBelow] & (6>>(1)))) << (1)) | //row below 
-                ((64*((*array)[cellw][cellh] & (4>>(1))))) | //left and right
-                ((1*((*array)[cellright][cellAbove] & 128)) >> 7) |
-                ((8*((*array)[cellright][cellBelow] & 128)) >> 7) |
-                ((64*((*array)[cellright][cellh] & 128)) >> 7) ;
+    //we're on the right hand border of a char
+    data =      ((((*array)[cellw][cellAbove]       &   (3)                   )   << 1)        )              | //row above 
+                ((((*array)[cellw][cellBelow]       &   (3)                   )   << 4)        )              | //row below 
+                ((((*array)[cellw][cellh]           &   (2)                   )   << 6)        )              | //to the left
+                ((((*array)[cellright][cellAbove]   &   (128)                 )       )    >> 7)              | //above and right
+                ((((*array)[cellright][cellBelow]   &   (128)                 )   << 3)    >> 7)              | //below and right
+                ((((*array)[cellright][cellh]       &   (128)                 )   << 6)    >> 7)              ; //mid and right
   } 
   else if (cellwp == 7){ 
-    data =      ((((*array)[cellw][cellAbove]     &   (3 << (cellwpminus)  ))       )  >> (cellwpminus))    | //row above 
-                ((((*array)[cellw][cellBelow]     &   (3 << (cellwpminus)  ))   << 3)  >> (cellwpminus))    | //row below 
-                (((((*array)[cellw][cellh]        &   (1 << (cellwpminus)  ))   << 6)  >> (cellwpminus)))   | //to the right 
-                ((((*array)[cellLeft][cellAbove]  &   (1)                  ))   << 2)                       | //above and left 
-                ((((*array)[cellLeft][cellBelow]  &   (1)                  ))   << 5)                       | //below and left
-                ((((*array)[cellLeft][cellh]      &   (1)                  ))   << 7)                       ; //mid and left
+    //or we're on the left hand side
+    data =      ((((*array)[cellw][cellAbove]       &   (192                 ))       )    >> 6)              | //row above 
+                ((((*array)[cellw][cellBelow]       &   (192                 ))   << 3)    >> 6)              | //row below 
+                ((((*array)[cellw][cellh]           &   (64                  ))   << 6)    >> 6)              | //to the right 
+                ((((*array)[cellLeft][cellAbove]    &   (1)                  ))   << 2)                       | //above and left 
+                ((((*array)[cellLeft][cellBelow]    &   (1)                  ))   << 5)                       | //below and left
+                ((((*array)[cellLeft][cellh]        &   (1)                  ))   << 7)                       ; //mid and left
   } 
   else{
-    //bit wizardry 
-    data =      ((((*array)[cellw][cellAbove]     &   (7 << (cellwpminus)  ))       )   >> (cellwpminus))   | //row above 
-                ((((*array)[cellw][cellBelow]     &   (7 << (cellwpminus)  ))   << 3)   >> (cellwpminus))   | //row below 
-                ((((*array)[cellw][cellh]         &   (2 << (cellwp)       ))   << 6)   >> (cellwp))        |  //to the left 
-                ((((*array)[cellw][cellh]         &   (1 << (cellwpminus)  ))   << 6)   >> (cellwpminus))   ; //to the right 
+    //bit wizardry
+    //or we're in the middle 
+    data =      ((((*array)[cellw][cellAbove]       &   (7 << (cellwpminus)  ))       )    >> cellwpminus)    | //row above 
+                ((((*array)[cellw][cellBelow]       &   (7 << (cellwpminus)  ))   << 3)    >> cellwpminus)    | //row below 
+                ((((*array)[cellw][cellh]           &   (2 << (cellwp)       ))   << 6)    >> cellwp)         |  //to the left 
+                ((((*array)[cellw][cellh]           &   (1 << (cellwpminus)  ))   << 6)    >> cellwpminus)    ; //to the right 
   }
 
   alive = hamming[data];
