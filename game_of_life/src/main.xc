@@ -143,6 +143,7 @@ unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], uint16_t cellw
   unsigned char data = 0;
   unsigned char alive = 0;
   unsigned char self = ((*array)[cellw][cellh] & (1 << cellwp)) >> cellwp;
+  unsigned char cellwpminus = cellwp - 1;
 
   uint16_t cellright = cellw + 1;
   uint16_t cellLeft = cellw - 1;
@@ -174,19 +175,19 @@ unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], uint16_t cellw
                 ((64*((*array)[cellright][cellh] & 128)) >> 7) ;
   } 
   else if (cellwp == 7){ 
-    data = (((*array)[cellw][cellAbove] & (3<<(cellwp - 1))) >> (cellwp - 1)) | //row above 
-                ((8*((*array)[cellw][cellBelow] & (3<<(cellwp - 1)))) >> (cellwp - 1)) | //row below 
-                ((64*((*array)[cellw][cellh] & (1<<(cellwp - 1))) >> (cellwp - 1))) | //to the left and right 
-                ((4*((*array)[cellLeft][cellAbove] & 1))) |
-                ((32*((*array)[cellLeft][cellBelow] & 1))) |
-                ((128*((*array)[cellLeft][cellh] & 1))) ;
+    data =      ((((*array)[cellw][cellAbove]     &   (3 << (cellwpminus)  ))       )  >> (cellwpminus))    | //row above 
+                ((((*array)[cellw][cellBelow]     &   (3 << (cellwpminus)  ))   << 3)  >> (cellwpminus))    | //row below 
+                (((((*array)[cellw][cellh]        &   (1 << (cellwpminus)  ))   << 6)  >> (cellwpminus)))   | //to the right 
+                ((((*array)[cellLeft][cellAbove]  &   (1)                  ))   << 2)                       | //above and left 
+                ((((*array)[cellLeft][cellBelow]  &   (1)                  ))   << 5)                       | //below and left
+                ((((*array)[cellLeft][cellh]      &   (1)                  ))   << 7)                       ; //mid and left
   } 
   else{
     //bit wizardry 
-    data =      ((((*array)[cellw][cellAbove]  &   (7 << (cellwp - 1)  ))     )  >> (cellwp - 1))  | //row above 
-                ((((*array)[cellw][cellBelow]  &   (7 << (cellwp - 1)  )) << 3)  >> (cellwp - 1))  | //row below 
-                ((((*array)[cellw][cellh]      &   (2 << (cellwp)      )) << 6)  >> (cellwp))      |  //to the left 
-                ((((*array)[cellw][cellh]      &   (1 << (cellwp - 1)  )) << 6)  >> (cellwp - 1))  ; //to the right 
+    data =      ((((*array)[cellw][cellAbove]     &   (7 << (cellwpminus)  ))       )   >> (cellwpminus))   | //row above 
+                ((((*array)[cellw][cellBelow]     &   (7 << (cellwpminus)  ))   << 3)   >> (cellwpminus))   | //row below 
+                ((((*array)[cellw][cellh]         &   (2 << (cellwp)       ))   << 6)   >> (cellwp))        |  //to the left 
+                ((((*array)[cellw][cellh]         &   (1 << (cellwpminus)  ))   << 6)   >> (cellwpminus))   ; //to the right 
   }
 
   alive = hamming[data];
