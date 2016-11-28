@@ -5,19 +5,16 @@
 #include <stdio.h>
 #include <platform.h>
 #include <xs1.h>
-
 #include "i2c.h"
 #include "pgmIO.h"
 #include "constants.h"
 #include "world.h"
-
 // interface ports to orientation
 on tile[0]: port p_scl = XS1_PORT_1E;
 on tile[0]: port p_sda = XS1_PORT_1F;
 //  both of these must be on port 0
 on tile[0]: in   port p_buttons = XS1_PORT_4E; //port to access xCore-200 buttons
 on tile[0]: out  port p_leds    = XS1_PORT_4F; //port to access xCore-200 LEDs
-
 // main concurrent thread
 void distributor(chanend ori, chanend but) {
   uint8_t val;
@@ -27,12 +24,10 @@ void distributor(chanend ori, chanend but) {
   uint32_t start = 0;
   uint32_t stop = 0;
   world_t world = blank_w();
-
   printf("%s -> %s\n%dx%d\nPress SW1 to load...\n", FILENAME_IN, FILENAME_OUT, IMHT, IMWD);
   // wait for SW1
   but :> val;
   p_leds <: D2;
-
   // READ
   val = _openinpgm(FILENAME_IN, IMWD, IMHT);
   if (val) {
@@ -47,12 +42,9 @@ void distributor(chanend ori, chanend but) {
     }
   }
   _closeinpgm();
-
   // world = block_w(world, new_ix(0, 0));
-
   printworld_w(world);
   // printworldcode_w(world, 1);
-
   t :> start;
   for (uintmax_t i = 0;; i++) {
     select {
@@ -106,7 +98,6 @@ void distributor(chanend ori, chanend but) {
         }
         break;
     }
-
     // do work
     // copy wrap
     world = copywrap_w(world);
@@ -132,30 +123,25 @@ void distributor(chanend ori, chanend but) {
       world = set_w(world, new_ix(0, c), getbuffer_w(world, new_ix(2, c)));
       world = set_w(world, new_ix(IMHT - 1, c), getbuffer_w(world, new_ix((IMHT - 1) % 2, c)));
     }
-
     // printworld_w(world);
   }
 }
-
 // Initialise and  read orientation, send first tilt event to channel
 void orientation(client interface i2c_master_if i2c, chanend toDist) {
   i2c_regop_res_t result;
   char status_data = 0;
   uint8_t tilted = 0;
-
   // Configure FXOS8700EQ
   result =
       i2c.write_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_XYZ_DATA_CFG_REG, 0x01);
   if (result != I2C_REGOP_SUCCESS) {
     printf("I2C write reg failed\n");
   }
-
   // Enable FXOS8700EQ
   result = i2c.write_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_CTRL_REG_1, 0x01);
   if (result != I2C_REGOP_SUCCESS) {
     printf("I2C write reg failed\n");
   }
-
   // Probe the orientation x-axis forever
   while (1) {
     // check until new orientation data is available
@@ -163,10 +149,8 @@ void orientation(client interface i2c_master_if i2c, chanend toDist) {
       status_data =
           i2c.read_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_DR_STATUS, result);
     } while (!status_data & 0x08);
-
     // get new x-axis tilt value
     int x = read_acceleration(i2c, FXOS8700EQ_OUT_X_MSB);
-
     // send signal to distributor after first tilt
     if (tilted) {
       if (x < UNTILT_THRESHOLD) {
@@ -181,10 +165,8 @@ void orientation(client interface i2c_master_if i2c, chanend toDist) {
     }
   }
 }
-
 void button(in port b, chanend toDist) {
   uint8_t val;
-
   // detect sw1 one time
   while (1) {
     b when pinseq(15)  :> val;
@@ -203,12 +185,10 @@ void button(in port b, chanend toDist) {
     }
   }
 }
-
 // Orchestrate concurrent system and start up all threads
 int main(void) {
   i2c_master_if i2c[1]; //interface to orientation
   chan c_ori, c_but;            // io channel
-
   par {
     on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10); // server thread providing orientation data
     on tile[0]: orientation(i2c[0], c_ori);
@@ -216,21 +196,6 @@ int main(void) {
     on tile[0]: distributor(c_ori, c_but);                 // thread to coordinate work on image
   }
 
-  // world_t world = blank_w();
-  // // printbuffer_w(world);
-  // //
-  // BITSETM(world.buffer, 0, 3, IMWD);
-  // BITSETM(world.buffer, 2, 0, IMWD);
-  // printbuffer_w(world);
-  //
-  // // for (int i = 0; i < 3; i++) {
-  // //   BITCLEARM(bitarray, 0,   i,   H);
-  // //   BITCLEARM(bitarray, i+1, 0,   H);
-  // //   BITCLEARM(bitarray, i,   3,  H);
-  // //   BITCLEARM(bitarray, 3,  i+1, H);
-  // // }
-
   // currently the program will never stop, the io thread does not support graceful shutdown
-
   return 0;
 }
