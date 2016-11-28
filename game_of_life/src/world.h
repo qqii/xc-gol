@@ -14,14 +14,15 @@ typedef enum CellState {
 
 // index
 typedef struct Ix {
-  uint16_t r;
-  uint16_t c;
+  int16_t r;
+  int16_t c;
 } ix_t;
 
 // cellular world
 typedef struct World {
   bit buffer[BITNSLOTSM(3, IMWD)]; // buffer 0 and 1 for working, buffer 2 for top
-  bit hash[BITNSLOTSM(IMHT, IMWD)];
+  bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)];
+
 } world_t;
 
 // creates a new ix_t
@@ -54,9 +55,11 @@ world_t setdead_w(world_t world, ix_t ix);
 // calls setalive_w or setdead_w depending on the alive argument
 world_t set_w(world_t world, ix_t ix, bit alive);
 
-bit gethash_w(world_t world, ix_t ix);
+bit getbuffer_w(world_t world, ix_t ix);
 
-world_t sethash_w(world_t world, ix_t ix, bit alive);
+world_t setbuffer_w(world_t world, ix_t ix, bit alive);
+
+world_t copywrap_w(world_t world);
 
 // returns the number of neighbours in the moore boundary of a cell in the
 // active hash
@@ -73,6 +76,7 @@ bit step_w(world_t world, ix_t ix);
 state_t stepchange_w(world_t world, ix_t ix);
 
 // sets the cells to be equal to pattern at the position specified
+world_t checkboard_w(world_t world, ix_t start, ix_t end);
 world_t gardenofeden6_w(world_t world, ix_t ix);
 world_t block_w(world_t world, ix_t ix);
 world_t beehive_w(world_t world, ix_t ix);

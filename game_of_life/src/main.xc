@@ -108,27 +108,29 @@ void distributor(chanend ori, chanend but) {
     }
 
     // do work
+    // copy wrap
+    world = copywrap_w(world);
     // write top result to buffer[2]
     // calculate row 1 into buffer[1]
     for (int c = 0; c < IMWD; c++) {
-      world = sethash_w(world, new_ix(2, c), step_w(world, new_ix(0, c)));
-      world = sethash_w(world, new_ix(1, c), step_w(world, new_ix(1, c)));
+      world = setbuffer_w(world, new_ix(2, c), step_w(world, new_ix(0, c)));
+      world = setbuffer_w(world, new_ix(1, c), step_w(world, new_ix(1, c)));
     }
     // rest of the rows
     for (int r = 2; r < IMHT; r++) {
       // update row into buffer[r%2]
       for (int c = 0; c < IMWD; c++) {
-        world = sethash_w(world, new_ix(r % 2, c), step_w(world, new_ix(r, c)));
+        world = setbuffer_w(world, new_ix(r % 2, c), step_w(world, new_ix(r, c)));
       }
       // writeback
       for (int c = 0; c < IMWD; c++) {
-        world = set_w(world, new_ix(r-1, c), gethash_w(world, new_ix((r + 1) % 2, c)));
+        world = set_w(world, new_ix(r-1, c), getbuffer_w(world, new_ix((r + 1) % 2, c)));
       }
     }
     // put top and last result from buffer
     for (int c = 0; c < IMWD; c++) {
-      world = set_w(world, new_ix(0, c), gethash_w(world, new_ix(2, c)));
-      world = set_w(world, new_ix(IMHT - 1, c), gethash_w(world, new_ix((IMHT - 1) % 2, c)));
+      world = set_w(world, new_ix(0, c), getbuffer_w(world, new_ix(2, c)));
+      world = set_w(world, new_ix(IMHT - 1, c), getbuffer_w(world, new_ix((IMHT - 1) % 2, c)));
     }
 
     // printworld_w(world);

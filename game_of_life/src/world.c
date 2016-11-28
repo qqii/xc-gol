@@ -11,7 +11,7 @@ ix_t new_ix(uint16_t r, uint16_t c) {
 world_t blank_w() {
   world_t world;
 
-  memset(world.hash, 0, BITNSLOTSM(IMHT, IMWD));
+  memset(world.hash, 0, BITNSLOTSM(IMHT + 2, IMWD + 2));
   memset(world.buffer, 0, BITNSLOTSM(3, IMWD));
 
   return world;
@@ -27,9 +27,9 @@ void printworld_w(world_t world) {
 
   print_ix(new_ix(IMHT, IMWD)); // print_ix doesn't print a newline
   printf(" world:\n");
-  for (int r = 0; r < IMHT; r++) {
-    for (int c = 0; c < IMWD; c++) {
-      printf("%c", BITTESTM(world.hash, r, c, IMWD) ? alive : dead);
+  for (int r = -1; r < IMHT + 1; r++) {
+    for (int c = -1; c < IMWD + 1; c++) {
+      printf("%c", isalive_w(world, new_ix(r, c)) ? alive : dead);
     }
     printf("\n");
   }
@@ -43,7 +43,7 @@ void printbuffer_w(world_t world) {
   printf(" buffer:\n");
   for (int r = 0; r < 3; r++) {
     for (int c = 0; c < IMWD; c++) {
-      printf("%c", BITTESTM(world.buffer, r, c, IMWD) ? alive : dead);
+      printf("%c", getbuffer_w(world, new_ix(r, c)) ? alive : dead);
     }
     printf("\n");
   }
@@ -63,38 +63,54 @@ void printworldcode_w(world_t world, bit onlyalive) {
 
 // world_t hashes are packed into bits, thus we need to extract them
 bit isalive_w(world_t world, ix_t ix) {
-  return BITTESTM(world.hash, ix.r, ix.c, IMWD);
+  return BITTESTM(world.hash, ix.r + 1, ix.c + 1, IMWD + 2);
 }
 
 // set the inactive hash to make sure the world is kept in sync
 inline world_t setalive_w(world_t world, ix_t ix) {
-  BITSETM(world.hash, ix.r, ix.c, IMWD);
+  BITSETM(world.hash, ix.r + 1, ix.c + 1, IMWD + 2);
   return world;
 }
 
 inline world_t setdead_w(world_t world, ix_t ix) {
-  BITCLEARM(world.hash, ix.r, ix.c, IMWD);
+  BITCLEARM(world.hash, ix.r + 1, ix.c + 1, IMWD + 2);
   return world;
 }
 
 world_t set_w(world_t world, ix_t ix, bit alive) {
   if (alive) {
-    BITSETM(world.hash, ix.r, ix.c, IMWD);
+    BITSETM(world.hash, ix.r + 1, ix.c + 1, IMWD + 2);
   } else {
-    BITCLEARM(world.hash, ix.r, ix.c, IMWD);
+    BITCLEARM(world.hash, ix.r + 1, ix.c + 1, IMWD + 2);
   }
   return world;
 }
 
-bit gethash_w(world_t world, ix_t ix) {
+bit getbuffer_w(world_t world, ix_t ix) {
   return BITTESTM(world.buffer, ix.r, ix.c, IMWD);
 }
 
-world_t sethash_w(world_t world, ix_t ix, bit alive) {
+world_t setbuffer_w(world_t world, ix_t ix, bit alive) {
   if (alive) {
     BITSETM(world.buffer, ix.r, ix.c, IMWD);
   } else {
     BITCLEARM(world.buffer, ix.r, ix.c, IMWD);
+  }
+  return world;
+}
+
+world_t copywrap_w(world_t world) {
+  world = set_w(world, new_ix(-1,      -1), isalive_w(world, new_ix(IMHT - 1, IMWD - 1)));
+  world = set_w(world, new_ix(-1,    IMWD), isalive_w(world ,new_ix(IMHT - 1,        0)));
+  world = set_w(world, new_ix(IMHT,    -1), isalive_w(world ,new_ix(0,        IMWD - 1)));
+  world = set_w(world, new_ix(IMHT,  IMWD), isalive_w(world ,new_ix(0,               0)));
+  for (int i = 0; i < IMWD; i++) {
+    world = set_w(world, new_ix(-1,   i), isalive_w(world, new_ix(IMHT - 1, i)));
+    world = set_w(world, new_ix(IMHT, i), isalive_w(world, new_ix(0,        i)));
+  }
+  for (int i = 0; i < IMWD; i++) {
+    world = set_w(world, new_ix(i,   -1), isalive_w(world, new_ix(i, IMWD - 1)));
+    world = set_w(world, new_ix(i, IMWD), isalive_w(world, new_ix(i,        0)));
   }
   return world;
 }
@@ -105,27 +121,27 @@ world_t sethash_w(world_t world, ix_t ix, bit alive) {
 // only perform the wrap when on the boundary
 uint8_t mooreneighbours_w(world_t world, ix_t ix) {
   bit i = 0;
-  i += isalive_w(world, new_ix((ix.r + IMHT - 1) % IMHT, (ix.c + IMWD - 1) % IMWD));
-  i += isalive_w(world, new_ix((ix.r + IMHT - 1) % IMHT, ix.c));
-  i += isalive_w(world, new_ix((ix.r + IMHT - 1) % IMHT, (ix.c + 1) % IMWD));
-  i += isalive_w(world, new_ix(ix.r,                     (ix.c + IMWD - 1) % IMWD));
-  i += isalive_w(world, new_ix(ix.r,                     (ix.c + 1) % IMWD));
-  i += isalive_w(world, new_ix((ix.r + 1) % IMHT,        (ix.c + IMWD - 1) % IMWD));
-  i += isalive_w(world, new_ix((ix.r + 1) % IMHT,        ix.c));
-  i += isalive_w(world, new_ix((ix.r + 1) % IMHT,        (ix.c + 1) % IMWD));
+  i += isalive_w(world, new_ix(ix.r - 1, ix.c - 1));
+  i += isalive_w(world, new_ix(ix.r - 1, ix.c    ));
+  i += isalive_w(world, new_ix(ix.r - 1, ix.c + 1));
+  i += isalive_w(world, new_ix(ix.r,     ix.c - 1));
+  i += isalive_w(world, new_ix(ix.r,     ix.c + 1));
+  i += isalive_w(world, new_ix(ix.r + 1, ix.c - 1));
+  i += isalive_w(world, new_ix(ix.r + 1, ix.c    ));
+  i += isalive_w(world, new_ix(ix.r + 1, ix.c + 1));
   return i;
 }
 
 uint8_t allfieldsum_w(world_t world, ix_t ix) {
   bit i = isalive_w(world, ix);
-  i += isalive_w(world, new_ix((ix.r + IMHT - 1) % IMHT, (ix.c + IMWD - 1) % IMWD));
-  i += isalive_w(world, new_ix((ix.r + IMHT - 1) % IMHT, ix.c));
-  i += isalive_w(world, new_ix((ix.r + IMHT - 1) % IMHT, (ix.c + 1) % IMWD));
-  i += isalive_w(world, new_ix(ix.r,                     (ix.c + IMWD - 1) % IMWD));
-  i += isalive_w(world, new_ix(ix.r,                     (ix.c + 1) % IMWD));
-  i += isalive_w(world, new_ix((ix.r + 1) % IMHT,        (ix.c + IMWD - 1) % IMWD));
-  i += isalive_w(world, new_ix((ix.r + 1) % IMHT,        ix.c));
-  i += isalive_w(world, new_ix((ix.r + 1) % IMHT,        (ix.c + 1) % IMWD));
+  i += isalive_w(world, new_ix(ix.r - 1, ix.c - 1));
+  i += isalive_w(world, new_ix(ix.r - 1, ix.c    ));
+  i += isalive_w(world, new_ix(ix.r - 1, ix.c + 1));
+  i += isalive_w(world, new_ix(ix.r,     ix.c - 1));
+  i += isalive_w(world, new_ix(ix.r,     ix.c + 1));
+  i += isalive_w(world, new_ix(ix.r + 1, ix.c - 1));
+  i += isalive_w(world, new_ix(ix.r + 1, ix.c    ));
+  i += isalive_w(world, new_ix(ix.r + 1, ix.c + 1));
   return i;
 }
 
@@ -146,6 +162,23 @@ state_t stepchange_w(world_t world, ix_t ix) {
     default:
       return DEAD;
   }
+}
+
+world_t checkboard_w(world_t world, ix_t start, ix_t end) {
+  printf("end.c - start.c: %d\n", end.c - start.c);
+  for (int r = start.r, x = 0; r < end.r; r++) {
+    for (int c = start.c; c < end.c; c++, x++) {
+      if (x % 2 == 0) {
+        world = set_w(world, new_ix(r, c), 1);
+      } else {
+        world = set_w(world, new_ix(r, c), 0);
+      }
+    }
+    if ((end.c - start.c) % 2 == 0) {
+      x++;
+    }
+  }
+  return world;
 }
 
 world_t gardenofeden6_w(world_t world, ix_t ix) {
