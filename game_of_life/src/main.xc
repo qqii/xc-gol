@@ -109,16 +109,27 @@ void distributor(chanend ori, chanend but) {
     }
 
     // do work
+    // copy wrap
+    world = set_w(world, new_ix(-1,      -1), isalive_w(world, new_ix(IMHT - 1, IMWD - 1)));
+    world = set_w(world, new_ix(-1,    IMWD), isalive_w(world ,new_ix(IMHT - 1,        0)));
+    world = set_w(world, new_ix(IMHT,    -1), isalive_w(world ,new_ix(0,        IMWD - 1)));
+    world = set_w(world, new_ix(IMHT,  IMWD), isalive_w(world ,new_ix(0,               0)));
+    for (int i = 0; i < IMWD; i++) {
+      world = set_w(world, new_ix(-1,   i), isalive_w(world, new_ix(IMHT - 1, i)));
+      world = set_w(world, new_ix(IMHT, i), isalive_w(world, new_ix(0,        i)));
+    }
+    for (int i = 0; i < IMWD; i++) {
+      world = set_w(world, new_ix(i,   -1), isalive_w(world, new_ix(i, IMWD - 1)));
+      world = set_w(world, new_ix(i, IMWD), isalive_w(world, new_ix(i,        0)));
+    }
     // write top result to buffer[2]
+    // calculate row 1 into buffer[1]
     for (int c = 0; c < IMWD; c++) {
       if (step_w(world, new_ix(0, c))) {
         BITSETM(buffer, 2, c, IMWD);
       } else {
         BITCLEARM(buffer, 2, c, IMWD);
       }
-    }
-    // calculate row 1 into buffer[1]
-    for (int c = 0; c < IMWD; c++) {
       if (step_w(world, new_ix(1, c))) {
         BITSETM(buffer, 1, c, IMWD);
       } else {
@@ -220,7 +231,7 @@ void button(in port b, chanend toDist) {
 // Orchestrate concurrent system and start up all threads
 int main(void) {
   i2c_master_if i2c[1]; //interface to orientation
-  chan c_ori, c_but;            // io channel
+  chan c_but, c_ori;
 
   par {
     on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10); // server thread providing orientation data

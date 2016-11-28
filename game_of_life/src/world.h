@@ -14,13 +14,13 @@ typedef enum CellState {
 
 // index
 typedef struct Ix {
-  uint16_t r;
-  uint16_t c;
+  int16_t r;
+  int16_t c;
 } ix_t;
 
 // cellular world
 typedef struct World {
-  bit hash[BITNSLOTSM(IMHT, IMWD)];
+  bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)];
 } world_t;
 
 // creates a new ix_t
@@ -52,17 +52,20 @@ world_t set_w(world_t world, ix_t ix, bit alive);
 
 // returns the number of neighbours in the moore boundary of a cell in the
 // active hash
-bit mooreneighbours_w(world_t world, ix_t ix);
+uint8_t mooreneighbours_w(world_t world, ix_t ix);
 
 // all-field sum includes the current position
-bit allfieldsum_w(world_t world, ix_t ix);
+uint8_t allfieldsum_w(world_t world, ix_t ix);
 
 // returns the next iteratation of a cell in the active hash according to the
 // rules of game of life
 // if you wanted to change the rules, here would be the place to change it
 bit step_w(world_t world, ix_t ix);
 
+state_t stepchange_w(world_t world, ix_t ix);
+
 // sets the cells to be equal to pattern at the position specified
+world_t checkboard_w(world_t world, ix_t start, ix_t end);
 world_t gardenofeden6_w(world_t world, ix_t ix);
 world_t block_w(world_t world, ix_t ix);
 world_t beehive_w(world_t world, ix_t ix);
