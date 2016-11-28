@@ -24,27 +24,30 @@ void distributor(chanend ori, chanend but) {
   uint32_t start = 0;
   uint32_t stop = 0;
   world_t world = blank_w();
-  printf("%s -> %s\n%dx%d\nPress SW1 to load...\n", FILENAME_IN, FILENAME_OUT, IMHT, IMWD);
+  printf("%s -> %s\n%dx%d -> %dx%d\nPress SW1 to load...\n", FILENAME_IN, FILENAME_OUT, IMHT, IMWD, WDHT, WDWD);
   // wait for SW1
   but :> val;
   p_leds <: D2;
   // READ
   val = _openinpgm(FILENAME_IN, IMWD, IMHT);
   if (val) {
-    printf("DataInStream: Error openening %s\n.", FILENAME_IN);
-    return;
-  }
-  // Read image line-by-line and send byte by byte to channel ch
-  for (int y = 0; y < IMHT; y++) {
-    _readinline(line, IMWD);
-    for (int x = 0; x < IMWD; x++) {
-      world = set_w(world, new_ix(y, x), line[x]);
+    printf("Error openening %s for reading.\n.", FILENAME_IN);
+    printf("Defaulting to a blank (or hardcoded) world...\n.");
+  } else {
+    // Read image line-by-line and send byte by byte to channel ch
+    for (int r = OFHT; r < IMHT; r++) {
+      _readinline(line, IMWD);
+      for (int c = OFWD; c < IMWD; c++) {
+        world = set_w(world, new_ix(r, c), line[c]);
+      }
     }
   }
   _closeinpgm();
-  // world = block_w(world, new_ix(0, 0));
+
+  // world = random_w(world, new_ix(0, 0), new_ix(WDHT, WDWD), 0);
   printworld_w(world);
   // printworldcode_w(world, 1);
+
   t :> start;
   for (uintmax_t i = 0;; i++) {
     select {
@@ -54,8 +57,8 @@ void distributor(chanend ori, chanend but) {
         printf("Iteration: %llu\t", i);
         printf("Elapsed Time (ns): %lu0\t", stop - start);
         int alive = 0;
-        for (int y = 0; y < IMHT; y++) {
-          for (int x = 0; x < IMWD; x++) {
+        for (int y = 0; y < WDHT; y++) {
+          for (int x = 0; x < WDWD; x++) {
             if (isalive_w(world, new_ix(y, x))) {
               alive++;
             }
@@ -68,20 +71,21 @@ void distributor(chanend ori, chanend but) {
         p_leds <: D1_b;
         printworld_w(world);
         // SAVE
-        val = _openoutpgm(FILENAME_OUT, IMWD, IMHT);
+        val = _openoutpgm(FILENAME_OUT, WDWD, WDHT);
         if (val) {
-          printf("DataOutStream: Error opening %s\n.", FILENAME_OUT);
-          return;
-        }
-        for (int y = 0; y < IMHT; y++) {
-          for (int x = 0; x < IMWD; x++) {
-            if (isalive_w(world, new_ix(y, x))) {
-              line[x] = ~0;
-            } else {
-              line[x] = 0;
+          printf("Error opening %s for saving.\n.", FILENAME_OUT);
+          printf("Skipping save...\n.");
+        } else {
+          for (int y = 0; y < IMHT; y++) {
+            for (int x = 0; x < IMWD; x++) {
+              if (isalive_w(world, new_ix(y, x))) {
+                line[x] = ~0;
+              } else {
+                line[x] = 0;
+              }
             }
+            _writeoutline(line, IMWD);
           }
-          _writeoutline(line, IMWD);
         }
         _closeoutpgm();
         break;
@@ -103,25 +107,25 @@ void distributor(chanend ori, chanend but) {
     world = copywrap_w(world);
     // write top result to buffer[2]
     // calculate row 1 into buffer[1]
-    for (int c = 0; c < IMWD; c++) {
+    for (int c = 0; c < WDWD; c++) {
       world = setbuffer_w(world, new_ix(2, c), step_w(world, new_ix(0, c)));
       world = setbuffer_w(world, new_ix(1, c), step_w(world, new_ix(1, c)));
     }
     // rest of the rows
-    for (int r = 2; r < IMHT; r++) {
+    for (int r = 2; r < WDHT; r++) {
       // update row into buffer[r%2]
-      for (int c = 0; c < IMWD; c++) {
+      for (int c = 0; c < WDWD; c++) {
         world = setbuffer_w(world, new_ix(r % 2, c), step_w(world, new_ix(r, c)));
       }
       // writeback
-      for (int c = 0; c < IMWD; c++) {
+      for (int c = 0; c < WDWD; c++) {
         world = set_w(world, new_ix(r-1, c), getbuffer_w(world, new_ix((r + 1) % 2, c)));
       }
     }
     // put top and last result from buffer
-    for (int c = 0; c < IMWD; c++) {
+    for (int c = 0; c < WDWD; c++) {
       world = set_w(world, new_ix(0, c), getbuffer_w(world, new_ix(2, c)));
-      world = set_w(world, new_ix(IMHT - 1, c), getbuffer_w(world, new_ix((IMHT - 1) % 2, c)));
+      world = set_w(world, new_ix(WDHT - 1, c), getbuffer_w(world, new_ix((WDHT - 1) % 2, c)));
     }
     // printworld_w(world);
   }

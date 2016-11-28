@@ -20,8 +20,8 @@ typedef struct Ix {
 
 // cellular world
 typedef struct World {
-  bit buffer[BITNSLOTSM(3, IMWD)]; // buffer 0 and 1 for working, buffer 2 for top
-  bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)];
+  bit buffer[BITNSLOTSM(3, WDWD)]; // buffer 0 and 1 for working, buffer 2 for top
+  bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)];
 
 } world_t;
 
@@ -76,6 +76,7 @@ bit step_w(world_t world, ix_t ix);
 state_t stepchange_w(world_t world, ix_t ix);
 
 // sets the cells to be equal to pattern at the position specified
+world_t random_w(world_t world, ix_t start, ix_t end, uint32_t seed);
 world_t checkboard_w(world_t world, ix_t start, ix_t end);
 world_t gardenofeden6_w(world_t world, ix_t ix);
 world_t block_w(world_t world, ix_t ix);
