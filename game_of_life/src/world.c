@@ -63,35 +63,47 @@ void printworldcode_w(world_t world, bit onlyalive) {
 
 // world_t hashes are packed into bits, thus we need to extract them
 bit isalive_w(world_t world, ix_t ix) {
-  return BITTESTM(world.hash, ix.r, ix.c, IMHT);
+  return BITTESTM(world.hash, ix.r, ix.c, IMWD);
 }
 
 // set the inactive hash to make sure the world is kept in sync
 inline world_t setalive_w(world_t world, ix_t ix) {
-  BITSETM(world.hash, ix.r, ix.c, IMHT);
+  BITSETM(world.hash, ix.r, ix.c, IMWD);
   return world;
 }
 
 inline world_t setdead_w(world_t world, ix_t ix) {
-  BITCLEARM(world.hash, ix.r, ix.c, IMHT);
+  BITCLEARM(world.hash, ix.r, ix.c, IMWD);
   return world;
 }
 
 world_t set_w(world_t world, ix_t ix, bit alive) {
   if (alive) {
-    BITSETM(world.hash, ix.r, ix.c, IMHT);
-    return world;
+    BITSETM(world.hash, ix.r, ix.c, IMWD);
   } else {
-    BITCLEARM(world.hash, ix.r, ix.c, IMHT);
-    return world;
+    BITCLEARM(world.hash, ix.r, ix.c, IMWD);
   }
+  return world;
+}
+
+bit gethash_w(world_t world, ix_t ix) {
+  return BITTESTM(world.buffer, ix.r, ix.c, IMWD);
+}
+
+world_t sethash_w(world_t world, ix_t ix, bit alive) {
+  if (alive) {
+    BITSETM(world.buffer, ix.r, ix.c, IMWD);
+  } else {
+    BITCLEARM(world.buffer, ix.r, ix.c, IMWD);
+  }
+  return world;
 }
 
 // doesn't use pmod since new_ix only takes bit thus -1 will cause errors
 // instead of doing -1, we do +world.bounds.x-1 which is the same effect
 // this code is pretty slow and could be sped up using some if statements to
 // only perform the wrap when on the boundary
-bit mooreneighbours_w(world_t world, ix_t ix) {
+uint8_t mooreneighbours_w(world_t world, ix_t ix) {
   bit i = 0;
   i += isalive_w(world, new_ix((ix.r + IMHT - 1) % IMHT, (ix.c + IMWD - 1) % IMWD));
   i += isalive_w(world, new_ix((ix.r + IMHT - 1) % IMHT, ix.c));
@@ -104,7 +116,7 @@ bit mooreneighbours_w(world_t world, ix_t ix) {
   return i;
 }
 
-bit allfieldsum_w(world_t world, ix_t ix) {
+uint8_t allfieldsum_w(world_t world, ix_t ix) {
   bit i = isalive_w(world, ix);
   i += isalive_w(world, new_ix((ix.r + IMHT - 1) % IMHT, (ix.c + IMWD - 1) % IMWD));
   i += isalive_w(world, new_ix((ix.r + IMHT - 1) % IMHT, ix.c));

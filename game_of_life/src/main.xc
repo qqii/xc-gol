@@ -109,40 +109,26 @@ void distributor(chanend ori, chanend but) {
 
     // do work
     // write top result to buffer[2]
-    for (int c = 0; c < IMWD; c++) {
-      if (step_w(world, new_ix(0, c))) {
-        BITSETM(world.buffer, 2, c, IMWD);
-      } else {
-        BITCLEARM(world.buffer, 2, c, IMWD);
-      }
-    }
     // calculate row 1 into buffer[1]
     for (int c = 0; c < IMWD; c++) {
-      if (step_w(world, new_ix(1, c))) {
-        BITSETM(world.buffer, 1, c, IMWD);
-      } else {
-        BITCLEARM(world.buffer, 1, c, IMWD);
-      }
+      world = sethash_w(world, new_ix(2, c), step_w(world, new_ix(0, c)));
+      world = sethash_w(world, new_ix(1, c), step_w(world, new_ix(1, c)));
     }
     // rest of the rows
     for (int r = 2; r < IMHT; r++) {
       // update row into buffer[r%2]
       for (int c = 0; c < IMWD; c++) {
-        if (step_w(world, new_ix(r, c))) {
-          BITSETM(world.buffer, r % 2, c, IMWD);
-        } else {
-          BITCLEARM(world.buffer, r % 2, c, IMWD);
-        }
+        world = sethash_w(world, new_ix(r % 2, c), step_w(world, new_ix(r, c)));
       }
       // writeback
       for (int c = 0; c < IMWD; c++) {
-        world = set_w(world, new_ix(r-1, c), BITTESTM(world.buffer, (r+1)%2, c, IMWD));
+        world = set_w(world, new_ix(r-1, c), gethash_w(world, new_ix((r + 1) % 2, c)));
       }
     }
     // put top and last result from buffer
     for (int c = 0; c < IMWD; c++) {
-      world = set_w(world, new_ix(0, c), BITTESTM(world.buffer, 2, c, IMWD));
-      world = set_w(world, new_ix(IMHT - 1, c), BITTESTM(world.buffer, (IMHT - 1) % 2, c, IMWD));
+      world = set_w(world, new_ix(0, c), gethash_w(world, new_ix(2, c)));
+      world = set_w(world, new_ix(IMHT - 1, c), gethash_w(world, new_ix((IMHT - 1) % 2, c)));
     }
 
     // printworld_w(world);

@@ -54,17 +54,23 @@ world_t setdead_w(world_t world, ix_t ix);
 // calls setalive_w or setdead_w depending on the alive argument
 world_t set_w(world_t world, ix_t ix, bit alive);
 
+bit gethash_w(world_t world, ix_t ix);
+
+world_t sethash_w(world_t world, ix_t ix, bit alive);
+
 // returns the number of neighbours in the moore boundary of a cell in the
 // active hash
-bit mooreneighbours_w(world_t world, ix_t ix);
+uint8_t mooreneighbours_w(world_t world, ix_t ix);
 
 // all-field sum includes the current position
-bit allfieldsum_w(world_t world, ix_t ix);
+uint8_t allfieldsum_w(world_t world, ix_t ix);
 
 // returns the next iteratation of a cell in the active hash according to the
 // rules of game of life
 // if you wanted to change the rules, here would be the place to change it
 bit step_w(world_t world, ix_t ix);
+
+state_t stepchange_w(world_t world, ix_t ix);
 
 // sets the cells to be equal to pattern at the position specified
 world_t gardenofeden6_w(world_t world, ix_t ix);
