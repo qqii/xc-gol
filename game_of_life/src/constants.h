@@ -8,6 +8,14 @@
 #define IMHT 16
 #define IMWD 16
 
+// image to world offset
+#define OFHT 0
+#define OFWD 0
+
+// world height
+#define WDHT IMHT
+#define WDWD IMWD
+
 // UNTILT_THRESHOLD < TILT_THRESHOLD to avoid it detecting multiple times
 #define TILT_THRESHOLD   30
 #define UNTILT_THRESHOLD 10

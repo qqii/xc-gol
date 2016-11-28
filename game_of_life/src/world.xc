@@ -1,7 +1,9 @@
 #include "world.h"
 
 #include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
+#include "noise.h"
 
 ix_t new_ix(uint16_t r, uint16_t c) {
   ix_t ix = {r, c};
@@ -22,12 +24,11 @@ void print_ix(ix_t ix) {
 
 void printworld_w(world_t world) {
   char alive = 219;
-  char dead = 176; // to 178 for other block characters
-
-  print_ix(new_ix(IMHT, IMWD)); // print_ix doesn't print a newline
+  char dead = 177; // to 178 for other block characters
+  print_ix(new_ix(WDHT, WDWD)); // print_ix doesn't print a newline
   printf(" world:\n");
-  for (int r = -1; r < IMHT + 1; r++) {
-    for (int c = -1; c < IMWD + 1; c++) {
+  for (int r = -1; r < WDHT + 1; r++) {
+    for (int c = -1; c < WDWD + 1; c++) {
       printf("%c", isalive_w(world, new_ix(r, c)) ? alive : dead);
     }
     printf("\n");
@@ -35,12 +36,27 @@ void printworld_w(world_t world) {
 }
 
 void printworldcode_w(world_t world, bit onlyalive) {
-  for (int r = 0; r < IMHT; r++) {
-    for (int c = 0; c < IMWD; c++) {
+  uint16_t rm = ~0;
+  uint16_t cm = ~0;
+
+  for (int r = 0; r < WDHT; r++) {
+    for (int c = 0; c < WDWD; c++) {
       if (isalive_w(world, new_ix(r, c))) {
-        printf("world = setalive_w(world, new_ix(%d + ix.r, %d + ix.c));\n", r, c);
+        if (r < rm) {
+          rm = r;
+        }
+        if (c < cm) {
+          cm = c;
+        }
+      }
+    }
+  }
+  for (int r = 0; r < WDHT; r++) {
+    for (int c = 0; c < WDWD; c++) {
+      if (isalive_w(world, new_ix(r, c))) {
+        printf("world = setalive_w(world, new_ix(%d + ix.r, %d + ix.c));\n", r - rm, c - cm);
       } else if (!onlyalive) {
-        printf("world = setdead_w(world, new_ix(%d + ix.r, %d + ix.c));\n", r, c);
+        printf("world = setdead_w(world, new_ix(%d + ix.r, %d + ix.c));\n", r - rm, c - cm);
       }
     }
   }
@@ -48,25 +64,25 @@ void printworldcode_w(world_t world, bit onlyalive) {
 
 // world_t hashes are packed into bits, thus we need to extract them
 bit isalive_w(world_t world, ix_t ix) {
-  return BITTESTM(world.hash, ix.r + 1, ix.c + 1, IMWD + 2);
+  return BITTESTM(world.hash, ix.r + 1, ix.c + 1, WDWD + 2);
 }
 
 // set the inactive hash to make sure the world is kept in sync
 inline world_t setalive_w(world_t world, ix_t ix) {
-  BITSETM(world.hash, ix.r + 1, ix.c + 1, IMWD + 2);
+  BITSETM(world.hash, ix.r + 1, ix.c + 1, WDWD + 2);
   return world;
 }
 
 inline world_t setdead_w(world_t world, ix_t ix) {
-  BITCLEARM(world.hash, ix.r + 1, ix.c + 1, IMWD + 2);
+  BITCLEARM(world.hash, ix.r + 1, ix.c + 1, WDWD + 2);
   return world;
 }
 
 world_t set_w(world_t world, ix_t ix, bit alive) {
   if (alive) {
-    BITSETM(world.hash, ix.r + 1, ix.c + 1, IMWD + 2);
+    BITSETM(world.hash, ix.r + 1, ix.c + 1, WDWD + 2);
   } else {
-    BITCLEARM(world.hash, ix.r + 1, ix.c + 1, IMWD + 2);
+    BITCLEARM(world.hash, ix.r + 1, ix.c + 1, WDWD + 2);
   }
   return world;
 }
@@ -120,8 +136,51 @@ state_t stepchange_w(world_t world, ix_t ix) {
   }
 }
 
+
+world_t random_w(world_t world, ix_t start, ix_t end, uint32_t seed) {
+  srand(seed);
+  for (int r = start.r; r < end.r; r++) {
+    for (int c = start.c; c < end.c; c++) {
+      if (rand() > RAND_MAX / 2) {
+        world = set_w(world, new_ix(r, c), 1);
+      } else {
+        world = set_w(world, new_ix(r, c), 0);
+      }
+    }
+  }
+  return world;
+}
+
+world_t perlin_w(world_t world, ix_t start, ix_t end, ix_t offset, float threshold, float freq, uint32_t depth, uint32_t seed) {
+  sperlin2d(seed);
+  for (int r = start.r; r < end.r; r++) {
+    for (int c = start.c; c < end.c; c++) {
+      if (threshold < perlin2d(r + offset.r, c + offset.c, freq, depth)) {
+        world = set_w(world, new_ix(r, c), 1);
+      } else {
+        world = set_w(world, new_ix(r, c), 0);
+      }
+    }
+  }
+  return world;
+}
+
+world_t randperlin_w(world_t world, ix_t start, ix_t end, ix_t offset, float freq, uint32_t depth, uint32_t seed) {
+  srand(seed);
+  sperlin2d(seed);
+  for (int r = start.r; r < end.r; r++) {
+    for (int c = start.c; c < end.c; c++) {
+      if (rand() < RAND_MAX * perlin2d(r + offset.r, c + offset.c, freq, depth)) {
+        world = set_w(world, new_ix(r, c), 1);
+      } else {
+        world = set_w(world, new_ix(r, c), 0);
+      }
+    }
+  }
+  return world;
+}
+
 world_t checkboard_w(world_t world, ix_t start, ix_t end) {
-  printf("end.c - start.c: %d\n", end.c - start.c);
   for (int r = start.r, x = 0; r < end.r; r++) {
     for (int c = start.c; c < end.c; c++, x++) {
       if (x % 2 == 0) {

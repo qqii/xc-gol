@@ -1,11 +1,9 @@
 // COMS20001 - Cellular Automaton Farm - Initial Code Skeleton
 // (using the XMOS i2c accelerometer demo code)
 #include <stdint.h>
-#include <string.h>
 #include <stdio.h>
 #include <platform.h>
 #include <xs1.h>
-
 #include "i2c.h"
 #include "pgmIO.h"
 #include "constants.h"
@@ -22,35 +20,38 @@ on tile[0]: out  port p_leds    = XS1_PORT_4F; //port to access xCore-200 LEDs
 void distributor(chanend ori, chanend but) {
   uint8_t val;
   uint8_t D1 = 1; // green flash state
-  bit line[IMWD];
+  uint8_t line[IMWD]; // read in storage
+  // timer that overflows after (2^32-1)*10ns
   timer t;
   uint32_t start = 0;
   uint32_t stop = 0;
-  bit buffer[BITNSLOTSM(3, IMWD)];
+  // world
   world_t world = blank_w();
+  uint32_t alive = 0;
+  bit buffer[BITNSLOTSM(3, IMWD)];
 
-  printf("%s -> %s\n%dx%d\nPress SW1 to load...\n", FILENAME_IN, FILENAME_OUT, IMHT, IMWD);
+  printf("%s -> %s\n%dx%d -> %dx%d\nPress SW1 to load...\n", FILENAME_IN, FILENAME_OUT, IMHT, IMWD, WDHT, WDWD);
   // wait for SW1
   but :> val;
   p_leds <: D2;
-
   // READ
   val = _openinpgm(FILENAME_IN, IMWD, IMHT);
   if (val) {
-    printf("DataInStream: Error openening %s\n.", FILENAME_IN);
-    return;
-  }
-  // Read image line-by-line and send byte by byte to channel ch
-  for (int y = 0; y < IMHT; y++) {
-    _readinline(line, IMWD);
-    for (int x = 0; x < IMWD; x++) {
-      world = set_w(world, new_ix(y, x), line[x]);
+    printf("Error openening %s for reading.\n.", FILENAME_IN);
+    printf("Defaulting to a blank (or hardcoded) world...\n.");
+  } else {
+    // Read image line-by-line and send byte by byte to channel ch
+    for (int r = OFHT; r < IMHT; r++) {
+      _readinline(line, IMWD);
+      for (int c = OFWD; c < IMWD; c++) {
+        world = set_w(world, new_ix(r, c), line[c]);
+      }
     }
   }
   _closeinpgm();
 
-  // world = block_w(world, new_ix(0, 0));
-
+  // world = random_w(world, new_ix(0, 0), new_ix(WDHT, WDWD), 0);
+  // world = randperlin_w(world, new_ix(0, 0), new_ix(WDHT, WDWD), new_ix(0, 0), 0.1, 4, 0);
   printworld_w(world);
   // printworldcode_w(world, 1);
 
@@ -62,14 +63,6 @@ void distributor(chanend ori, chanend but) {
         p_leds <: D1_r;
         printf("Iteration: %llu\t", i);
         printf("Elapsed Time (ns): %lu0\t", stop - start);
-        int alive = 0;
-        for (int y = 0; y < IMHT; y++) {
-          for (int x = 0; x < IMWD; x++) {
-            if (isalive_w(world, new_ix(y, x))) {
-              alive++;
-            }
-          }
-        }
         printf("Alive Cells: %d\n", alive);
         ori :> val;
         break;
@@ -77,20 +70,21 @@ void distributor(chanend ori, chanend but) {
         p_leds <: D1_b;
         printworld_w(world);
         // SAVE
-        val = _openoutpgm(FILENAME_OUT, IMWD, IMHT);
+        val = _openoutpgm(FILENAME_OUT, WDWD, WDHT);
         if (val) {
-          printf("DataOutStream: Error opening %s\n.", FILENAME_OUT);
-          return;
-        }
-        for (int y = 0; y < IMHT; y++) {
-          for (int x = 0; x < IMWD; x++) {
-            if (isalive_w(world, new_ix(y, x))) {
-              line[x] = ~0;
-            } else {
-              line[x] = 0;
+          printf("Error opening %s for saving.\n.", FILENAME_OUT);
+          printf("Skipping save...\n.");
+        } else {
+          for (int y = 0; y < IMHT; y++) {
+            for (int x = 0; x < IMWD; x++) {
+              if (isalive_w(world, new_ix(y, x))) {
+                line[x] = ~0;
+              } else {
+                line[x] = 0;
+              }
             }
+            _writeoutline(line, IMWD);
           }
-          _writeoutline(line, IMWD);
         }
         _closeoutpgm();
         break;
@@ -107,8 +101,8 @@ void distributor(chanend ori, chanend but) {
         }
         break;
     }
-
     // do work
+    alive = 0;
     // copy wrap
     world = set_w(world, new_ix(-1,      -1), isalive_w(world, new_ix(IMHT - 1, IMWD - 1)));
     world = set_w(world, new_ix(-1,    IMWD), isalive_w(world ,new_ix(IMHT - 1,        0)));
@@ -124,62 +118,58 @@ void distributor(chanend ori, chanend but) {
     }
     // write top result to buffer[2]
     // calculate row 1 into buffer[1]
-    for (int c = 0; c < IMWD; c++) {
+    for (int c = 0; c < WDWD; c++) {
       if (step_w(world, new_ix(0, c))) {
-        BITSETM(buffer, 2, c, IMWD);
+        BITSETM(buffer, 2, c, WDWD);
+        alive++;
       } else {
-        BITCLEARM(buffer, 2, c, IMWD);
-      }
-      if (step_w(world, new_ix(1, c))) {
-        BITSETM(buffer, 1, c, IMWD);
-      } else {
-        BITCLEARM(buffer, 1, c, IMWD);
+        BITCLEARM(buffer, 2, c, WDWD);
       }
     }
     // rest of the rows
-    for (int r = 2; r < IMHT; r++) {
-      // update row into buffer[r%2]
-      for (int c = 0; c < IMWD; c++) {
+    for (int r = 1; r < WDHT; r++) {
+      // update row into buffer[r%2] and writeback from buffer[(r-1)%2]
+      if (step_w(world, new_ix(r, 0))) {
+        BITSETM(buffer, r % 2, 0, WDWD);
+        alive++;
+      } else {
+        BITCLEARM(buffer, r % 2, 0, WDWD);
+      }
+      for (int c = 1; c < WDWD; c++) {
         if (step_w(world, new_ix(r, c))) {
-          BITSETM(buffer, r % 2, c, IMWD);
+          BITSETM(buffer, r % 2, c, WDWD);
+          alive++;
         } else {
-          BITCLEARM(buffer, r % 2, c, IMWD);
+          BITCLEARM(buffer, r % 2, c, WDWD);
         }
+        world = set_w(world, new_ix(r - 1, c - 1), BITTESTM(buffer, (r - 1) % 2, c - 1, WDWD));
       }
-      // writeback
-      for (int c = 0; c < IMWD; c++) {
-        world = set_w(world, new_ix(r-1, c), BITTESTM(buffer, (r+1)%2, c, IMWD));
-      }
+      world = set_w(world, new_ix(r - 1, WDWD - 1), BITTESTM(buffer, (r - 1) % 2, WDWD - 1, WDWD));
     }
     // put top and last result from buffer
-    for (int c = 0; c < IMWD; c++) {
+    for (int c = 0; c < WDWD; c++) {
       world = set_w(world, new_ix(0, c), BITTESTM(buffer, 2, c, IMWD));
-      world = set_w(world, new_ix(IMHT - 1, c), BITTESTM(buffer, (IMHT - 1) % 2, c, IMWD));
+      world = set_w(world, new_ix(WDHT - 1, c), BITTESTM(buffer, (IMHT - 1) % 2, c, IMWD));
     }
-
     // printworld_w(world);
   }
 }
-
 // Initialise and  read orientation, send first tilt event to channel
 void orientation(client interface i2c_master_if i2c, chanend toDist) {
   i2c_regop_res_t result;
   char status_data = 0;
   uint8_t tilted = 0;
-
   // Configure FXOS8700EQ
   result =
       i2c.write_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_XYZ_DATA_CFG_REG, 0x01);
   if (result != I2C_REGOP_SUCCESS) {
     printf("I2C write reg failed\n");
   }
-
   // Enable FXOS8700EQ
   result = i2c.write_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_CTRL_REG_1, 0x01);
   if (result != I2C_REGOP_SUCCESS) {
     printf("I2C write reg failed\n");
   }
-
   // Probe the orientation x-axis forever
   while (1) {
     // check until new orientation data is available
@@ -187,10 +177,8 @@ void orientation(client interface i2c_master_if i2c, chanend toDist) {
       status_data =
           i2c.read_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_DR_STATUS, result);
     } while (!status_data & 0x08);
-
     // get new x-axis tilt value
     int x = read_acceleration(i2c, FXOS8700EQ_OUT_X_MSB);
-
     // send signal to distributor after first tilt
     if (tilted) {
       if (x < UNTILT_THRESHOLD) {
@@ -205,10 +193,8 @@ void orientation(client interface i2c_master_if i2c, chanend toDist) {
     }
   }
 }
-
 void button(in port b, chanend toDist) {
   uint8_t val;
-
   // detect sw1 one time
   while (1) {
     b when pinseq(15)  :> val;
@@ -227,11 +213,10 @@ void button(in port b, chanend toDist) {
     }
   }
 }
-
 // Orchestrate concurrent system and start up all threads
 int main(void) {
   i2c_master_if i2c[1]; //interface to orientation
-  chan c_but, c_ori;
+  chan c_ori, c_but;            // io channel
 
   par {
     on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10); // server thread providing orientation data
@@ -240,21 +225,6 @@ int main(void) {
     on tile[0]: distributor(c_ori, c_but);                 // thread to coordinate work on image
   }
 
-  // world_t world = blank_w();
-  // // printbuffer_w(world);
-  // //
-  // BITSETM(world.buffer, 0, 3, IMWD);
-  // BITSETM(world.buffer, 2, 0, IMWD);
-  // printbuffer_w(world);
-  //
-  // // for (int i = 0; i < 3; i++) {
-  // //   BITCLEARM(bitarray, 0,   i,   H);
-  // //   BITCLEARM(bitarray, i+1, 0,   H);
-  // //   BITCLEARM(bitarray, i,   3,  H);
-  // //   BITCLEARM(bitarray, 3,  i+1, H);
-  // // }
-
   // currently the program will never stop, the io thread does not support graceful shutdown
-
   return 0;
 }
