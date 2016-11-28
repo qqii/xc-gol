@@ -56,7 +56,7 @@ void distributor(chanend ori, chanend but) {
   // printworldcode_w(world, 1);
 
   t :> start;
-  for (uintmax_t i = 0; i < 1024; i++) {
+  for (uintmax_t i = 0; i < ITERATIONS; i++) {
     select {
       case ori :> val:
         t :> stop;
@@ -128,13 +128,7 @@ void distributor(chanend ori, chanend but) {
     }
     // rest of the rows
     for (int r = 1; r < WDHT; r++) {
-      // update row into buffer[r%2] and writeback from buffer[(r-1)%2]
-      // if (step_w(world, r, 0)) {
-      //   BITSETM(buffer, r % 2, 0, WDWD);
-      //   alive++;
-      // } else {
-      //   BITCLEARM(buffer, r % 2, 0, WDWD);
-      // }
+      // update row into buffer[r%2]
       for (int c = 0; c < WDWD; c++) {
         if (step_w(world, r, c)) {
           BITSETM(buffer, r % 2, c, WDWD);
@@ -143,10 +137,10 @@ void distributor(chanend ori, chanend but) {
           BITCLEARM(buffer, r % 2, c, WDWD);
         }
       }
+      // writeback from buffer[(r-1)%2]
       for (int c = 0; c < WDWD; c++) {
         set_w(world, r - 1, c, BITTESTM(buffer, (r - 1) % 2, c, WDWD));
       }
-      // set_w(world, r - 1, WDWD - 1, BITTESTM(buffer, (r - 1) % 2, WDWD - 1, WDWD));
     }
     // put top and last result from buffer
     for (int c = 0; c < WDWD; c++) {

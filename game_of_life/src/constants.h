@@ -1,6 +1,8 @@
 #ifndef _CONSTANTS_H_
 #define _CONSTANTS_H_
 
+#include <stdint.h>
+
 #define FILENAME_IN "test.pgm"
 #define FILENAME_OUT "testout.pgm"
 
@@ -15,6 +17,8 @@
 // world height
 #define WDHT 16
 #define WDWD 16
+
+#define ITERATIONS 1024 // UINTMAX_MAX
 
 // UNTILT_THRESHOLD < TILT_THRESHOLD to avoid it detecting multiple times
 #define TILT_THRESHOLD   30
