@@ -113,10 +113,10 @@ void distributor(chanend ori, chanend but) {
     // calculate row 1 into buffer[1]
     for (int c = 0; c < WDWD; c++) {
       world = setbuffer_w(world, new_ix(2, c), step_w(world, new_ix(0, c)));
-      world = setbuffer_w(world, new_ix(1, c), step_w(world, new_ix(1, c)));
+      // world = setbuffer_w(world, new_ix(1, c), step_w(world, new_ix(1, c)));
     }
     // rest of the rows
-    for (int r = 2; r < WDHT; r++) {
+    for (int r = 1; r < WDHT; r++) {
       // update row into buffer[r%2] and writeback from buffer[(r-1)%2]
       world = setbuffer_w(world, new_ix(r % 2, 0), step_w(world, new_ix(r, 0)));
       for (int c = 1; c < WDWD; c++) {
