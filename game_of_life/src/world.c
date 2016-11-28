@@ -12,7 +12,6 @@ world_t blank_w() {
   world_t world;
 
   memset(world.hash, 0, BITNSLOTSM(IMHT, IMWD));
-  memset(world.buffer, 0, BITNSLOTSM(3, IMWD));
 
   return world;
 }
@@ -30,20 +29,6 @@ void printworld_w(world_t world) {
   for (int r = 0; r < IMHT; r++) {
     for (int c = 0; c < IMWD; c++) {
       printf("%c", BITTESTM(world.hash, r, c, IMWD) ? alive : dead);
-    }
-    printf("\n");
-  }
-}
-
-void printbuffer_w(world_t world) {
-  char alive = 219;
-  char dead = 176; // to 178 for other block characters
-
-  print_ix(new_ix(3, IMWD)); // print_ix doesn't print a newline
-  printf(" buffer:\n");
-  for (int r = 0; r < 3; r++) {
-    for (int c = 0; c < IMWD; c++) {
-      printf("%c", BITTESTM(world.buffer, r, c, IMWD) ? alive : dead);
     }
     printf("\n");
   }

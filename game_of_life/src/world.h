@@ -20,7 +20,6 @@ typedef struct Ix {
 
 // cellular world
 typedef struct World {
-  bit buffer[BITNSLOTSM(3, IMWD)]; // buffer 0 and 1 for working, buffer 2 for top
   bit hash[BITNSLOTSM(IMHT, IMWD)];
 } world_t;
 
@@ -35,9 +34,6 @@ void print_ix(ix_t ix);
 
 // prints the active hash of the world
 void printworld_w(world_t world);
-
-// prints the world buffer
-void printbuffer_w(world_t world);
 
 // prints the code needed to set a world
 void printworldcode_w(world_t world, bit onlyalive);
