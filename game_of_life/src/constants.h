@@ -1,12 +1,24 @@
 #ifndef _CONSTANTS_H_
 #define _CONSTANTS_H_
 
+#include <stdint.h>
+
 #define FILENAME_IN "test.pgm"
 #define FILENAME_OUT "testout.pgm"
 
 // image height and width
 #define IMHT 16
 #define IMWD 16
+
+// image to world offset
+#define OFHT 0
+#define OFWD 0
+
+// world height
+#define WDHT 16
+#define WDWD 16
+
+#define ITERATIONS 1024 // UINTMAX_MAX
 
 // UNTILT_THRESHOLD < TILT_THRESHOLD to avoid it detecting multiple times
 #define TILT_THRESHOLD   30
