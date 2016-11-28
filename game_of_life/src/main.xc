@@ -9,6 +9,9 @@
 #include "pgmIO.h"
 #include "constants.h"
 #include "world.h"
+
+#include <stdlib.h>
+
 // interface ports to orientation
 on tile[0]: port p_scl = XS1_PORT_1E;
 on tile[0]: port p_sda = XS1_PORT_1F;
@@ -19,10 +22,12 @@ on tile[0]: out  port p_leds    = XS1_PORT_4F; //port to access xCore-200 LEDs
 void distributor(chanend ori, chanend but) {
   uint8_t val;
   uint8_t D1 = 1; // green flash state
-  bit line[IMWD];
+  uint8_t line[IMWD]; // read in storage
+  // timer that overflows after (2^32-1)*10ns
   timer t;
   uint32_t start = 0;
   uint32_t stop = 0;
+  // world
   world_t world = blank_w();
   printf("%s -> %s\n%dx%d -> %dx%d\nPress SW1 to load...\n", FILENAME_IN, FILENAME_OUT, IMHT, IMWD, WDHT, WDWD);
   // wait for SW1
@@ -45,6 +50,7 @@ void distributor(chanend ori, chanend but) {
   _closeinpgm();
 
   // world = random_w(world, new_ix(0, 0), new_ix(WDHT, WDWD), 0);
+  world = randperlin_w(world, new_ix(0, 0), new_ix(WDHT, WDWD), new_ix(0, 0), 0.1, 4, 0);
   printworld_w(world);
   // printworldcode_w(world, 1);
 

@@ -44,7 +44,7 @@ int _readinline(unsigned char line[], int width) {
   nb = fread(line, 1, width, _INFP);
 
   if (nb != width) {
-    // printf( "Error reading line, nb = %d\n", nb );
+    printf( "Error reading line, nb = %d\n", nb );
     // Error or end of file
     return -1;
   }
@@ -87,7 +87,7 @@ int _writeoutline(unsigned char line[], int width) {
   nb = fwrite(line, 1, width, _OUTFP);
 
   if (nb != width) {
-    // printf( "Error writing line, nb = %d\n", nb );
+    printf( "Error writing line, nb = %d\n", nb );
     // Error or end of file
     return -1;
   }
