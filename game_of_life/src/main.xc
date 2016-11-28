@@ -26,6 +26,7 @@ void distributor(chanend ori, chanend but) {
   timer t;
   uint32_t start = 0;
   uint32_t stop = 0;
+  bit buffer[BITNSLOTSM(3, IMWD)];
   world_t world = blank_w();
 
   printf("%s -> %s\n%dx%d\nPress SW1 to load...\n", FILENAME_IN, FILENAME_OUT, IMHT, IMWD);
@@ -111,17 +112,17 @@ void distributor(chanend ori, chanend but) {
     // write top result to buffer[2]
     for (int c = 0; c < IMWD; c++) {
       if (step_w(world, new_ix(0, c))) {
-        BITSETM(world.buffer, 2, c, IMWD);
+        BITSETM(buffer, 2, c, IMWD);
       } else {
-        BITCLEARM(world.buffer, 2, c, IMWD);
+        BITCLEARM(buffer, 2, c, IMWD);
       }
     }
     // calculate row 1 into buffer[1]
     for (int c = 0; c < IMWD; c++) {
       if (step_w(world, new_ix(1, c))) {
-        BITSETM(world.buffer, 1, c, IMWD);
+        BITSETM(buffer, 1, c, IMWD);
       } else {
-        BITCLEARM(world.buffer, 1, c, IMWD);
+        BITCLEARM(buffer, 1, c, IMWD);
       }
     }
     // rest of the rows
@@ -129,20 +130,20 @@ void distributor(chanend ori, chanend but) {
       // update row into buffer[r%2]
       for (int c = 0; c < IMWD; c++) {
         if (step_w(world, new_ix(r, c))) {
-          BITSETM(world.buffer, r % 2, c, IMWD);
+          BITSETM(buffer, r % 2, c, IMWD);
         } else {
-          BITCLEARM(world.buffer, r % 2, c, IMWD);
+          BITCLEARM(buffer, r % 2, c, IMWD);
         }
       }
       // writeback
       for (int c = 0; c < IMWD; c++) {
-        world = set_w(world, new_ix(r-1, c), BITTESTM(world.buffer, (r+1)%2, c, IMWD));
+        world = set_w(world, new_ix(r-1, c), BITTESTM(buffer, (r+1)%2, c, IMWD));
       }
     }
     // put top and last result from buffer
     for (int c = 0; c < IMWD; c++) {
-      world = set_w(world, new_ix(0, c), BITTESTM(world.buffer, 2, c, IMWD));
-      world = set_w(world, new_ix(IMHT - 1, c), BITTESTM(world.buffer, (IMHT - 1) % 2, c, IMWD));
+      world = set_w(world, new_ix(0, c), BITTESTM(buffer, 2, c, IMWD));
+      world = set_w(world, new_ix(IMHT - 1, c), BITTESTM(buffer, (IMHT - 1) % 2, c, IMWD));
     }
 
     // printworld_w(world);
