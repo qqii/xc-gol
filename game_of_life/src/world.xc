@@ -3,7 +3,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "noise.h"
 
 ix_t new_ix(uint16_t r, uint16_t c) {
   ix_t ix = {r, c};
@@ -142,35 +141,6 @@ world_t random_w(world_t world, ix_t start, ix_t end, uint32_t seed) {
   for (int r = start.r; r < end.r; r++) {
     for (int c = start.c; c < end.c; c++) {
       if (rand() > RAND_MAX / 2) {
-        world = set_w(world, new_ix(r, c), 1);
-      } else {
-        world = set_w(world, new_ix(r, c), 0);
-      }
-    }
-  }
-  return world;
-}
-
-world_t perlin_w(world_t world, ix_t start, ix_t end, ix_t offset, float threshold, float freq, uint32_t depth, uint32_t seed) {
-  sperlin2d(seed);
-  for (int r = start.r; r < end.r; r++) {
-    for (int c = start.c; c < end.c; c++) {
-      if (threshold < perlin2d(r + offset.r, c + offset.c, freq, depth)) {
-        world = set_w(world, new_ix(r, c), 1);
-      } else {
-        world = set_w(world, new_ix(r, c), 0);
-      }
-    }
-  }
-  return world;
-}
-
-world_t randperlin_w(world_t world, ix_t start, ix_t end, ix_t offset, float freq, uint32_t depth, uint32_t seed) {
-  srand(seed);
-  sperlin2d(seed);
-  for (int r = start.r; r < end.r; r++) {
-    for (int c = start.c; c < end.c; c++) {
-      if (rand() < RAND_MAX * perlin2d(r + offset.r, c + offset.c, freq, depth)) {
         world = set_w(world, new_ix(r, c), 1);
       } else {
         world = set_w(world, new_ix(r, c), 0);

@@ -66,8 +66,6 @@ state_t stepchange_w(world_t world, ix_t ix);
 
 // sets the cells to be equal to pattern at the position specified
 world_t random_w(world_t world, ix_t start, ix_t end, uint32_t seed);
-world_t perlin_w(world_t world, ix_t start, ix_t end, ix_t offset, float threshold, float freq, uint32_t depth, uint32_t seed);
-world_t randperlin_w(world_t world, ix_t start, ix_t end, ix_t offset, float freq, uint32_t depth, uint32_t seed);
 world_t checkboard_w(world_t world, ix_t start, ix_t end);
 world_t gardenofeden6_w(world_t world, ix_t ix);
 world_t block_w(world_t world, ix_t ix);
