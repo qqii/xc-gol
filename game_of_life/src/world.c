@@ -1,6 +1,6 @@
 #include "world.h"
 
-#include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 
 ix_t new_ix(uint16_t r, uint16_t c) {
@@ -11,11 +11,8 @@ ix_t new_ix(uint16_t r, uint16_t c) {
 world_t blank_w() {
   world_t world;
 
-  world.active = 0;
-  for (int i = 0; i < BITNSLOTSM(IMHT, IMWD); i++) {
-    world.hash[0][i] = 0b00000000;
-    world.hash[1][i] = 0b00000000;
-  }
+  memset(world.hash, 0, BITNSLOTSM(IMHT, IMWD));
+  memset(world.buffer, 0, BITNSLOTSM(3, IMWD));
 
   return world;
 }
@@ -28,18 +25,31 @@ void printworld_w(world_t world) {
   char alive = 219;
   char dead = 176; // to 178 for other block characters
 
-  printf("world: ");
-  print_ix(new_ix(IMHT, (IMWD/8)*8)); // print_ix doesn't print a newline
-  printf(" %d\n", world.active);
+  print_ix(new_ix(IMHT, IMWD)); // print_ix doesn't print a newline
+  printf(" world:\n");
   for (int r = 0; r < IMHT; r++) {
     for (int c = 0; c < IMWD; c++) {
-      printf("%c", BITTESTM(world.hash[world.active], r, c, IMHT) ? alive : dead);
+      printf("%c", BITTESTM(world.hash, r, c, IMWD) ? alive : dead);
     }
     printf("\n");
   }
 }
 
-void printworldcode_w(world_t world, uint8_t onlyalive) {
+void printbuffer_w(world_t world) {
+  char alive = 219;
+  char dead = 176; // to 178 for other block characters
+
+  print_ix(new_ix(3, IMWD)); // print_ix doesn't print a newline
+  printf(" buffer:\n");
+  for (int r = 0; r < 3; r++) {
+    for (int c = 0; c < IMWD; c++) {
+      printf("%c", BITTESTM(world.buffer, r, c, IMWD) ? alive : dead);
+    }
+    printf("\n");
+  }
+}
+
+void printworldcode_w(world_t world, bit onlyalive) {
   for (int r = 0; r < IMHT; r++) {
     for (int c = 0; c < IMWD; c++) {
       if (isalive_w(world, new_ix(r, c))) {
@@ -52,44 +62,50 @@ void printworldcode_w(world_t world, uint8_t onlyalive) {
 }
 
 // world_t hashes are packed into bits, thus we need to extract them
-uint8_t isalive_w(world_t world, ix_t ix) {
-  return BITTESTM(world.hash[world.active], ix.r, ix.c, IMHT) >> ((ix.r*IMHT+ix.c) & (BIT_SIZE - 1));
+bit isalive_w(world_t world, ix_t ix) {
+  return BITTESTM(world.hash, ix.r, ix.c, IMHT);
 }
 
 // set the inactive hash to make sure the world is kept in sync
 inline world_t setalive_w(world_t world, ix_t ix) {
-  world.hash[!world.active][BITSLOTM(ix.r, ix.c, IMHT)] |= BITMASKM(ix.r, ix.c, IMHT);
+  BITSETM(world.hash, ix.r, ix.c, IMHT);
   return world;
 }
 
 inline world_t setdead_w(world_t world, ix_t ix) {
-  world.hash[!world.active][BITSLOTM(ix.r, ix.c, IMHT)] &= ~BITMASKM(ix.r, ix.c, IMHT);
+  BITCLEARM(world.hash, ix.r, ix.c, IMHT);
   return world;
 }
 
-world_t set_w(world_t world, ix_t ix, uint8_t alive) {
+world_t set_w(world_t world, ix_t ix, bit alive) {
   if (alive) {
-    // return setalive_w(world, ix);
-    world.hash[!world.active][BITSLOTM(ix.r, ix.c, IMHT)] |= BITMASKM(ix.r, ix.c, IMHT);
+    BITSETM(world.hash, ix.r, ix.c, IMHT);
     return world;
   } else {
-    // return setdead_w(world, ix);
-    world.hash[!world.active][BITSLOTM(ix.r, ix.c, IMHT)] &= ~BITMASKM(ix.r, ix.c, IMHT);
+    BITCLEARM(world.hash, ix.r, ix.c, IMHT);
     return world;
   }
 }
 
-world_t flip_w(world_t world) {
-  world.active = !world.active;
-  return world;
-}
-
-// doesn't use pmod since new_ix only takes uint8_t thus -1 will cause errors
+// doesn't use pmod since new_ix only takes bit thus -1 will cause errors
 // instead of doing -1, we do +world.bounds.x-1 which is the same effect
 // this code is pretty slow and could be sped up using some if statements to
 // only perform the wrap when on the boundary
-uint8_t mooreneighbours_w(world_t world, ix_t ix) {
-  uint8_t i = 0;
+bit mooreneighbours_w(world_t world, ix_t ix) {
+  bit i = 0;
+  i += isalive_w(world, new_ix((ix.r + IMHT - 1) % IMHT, (ix.c + IMWD - 1) % IMWD));
+  i += isalive_w(world, new_ix((ix.r + IMHT - 1) % IMHT, ix.c));
+  i += isalive_w(world, new_ix((ix.r + IMHT - 1) % IMHT, (ix.c + 1) % IMWD));
+  i += isalive_w(world, new_ix(ix.r,                     (ix.c + IMWD - 1) % IMWD));
+  i += isalive_w(world, new_ix(ix.r,                     (ix.c + 1) % IMWD));
+  i += isalive_w(world, new_ix((ix.r + 1) % IMHT,        (ix.c + IMWD - 1) % IMWD));
+  i += isalive_w(world, new_ix((ix.r + 1) % IMHT,        ix.c));
+  i += isalive_w(world, new_ix((ix.r + 1) % IMHT,        (ix.c + 1) % IMWD));
+  return i;
+}
+
+bit allfieldsum_w(world_t world, ix_t ix) {
+  bit i = isalive_w(world, ix);
   i += isalive_w(world, new_ix((ix.r + IMHT - 1) % IMHT, (ix.c + IMWD - 1) % IMWD));
   i += isalive_w(world, new_ix((ix.r + IMHT - 1) % IMHT, ix.c));
   i += isalive_w(world, new_ix((ix.r + IMHT - 1) % IMHT, (ix.c + 1) % IMWD));
@@ -102,10 +118,22 @@ uint8_t mooreneighbours_w(world_t world, ix_t ix) {
 }
 
 // rules for game of life
-uint8_t step_w(world_t world, ix_t ix) {
-  uint8_t neighbours = mooreneighbours_w(world, ix);
+bit step_w(world_t world, ix_t ix) {
+  bit neighbours = mooreneighbours_w(world, ix);
 
   return neighbours == 3 || (neighbours == 2 && isalive_w(world, ix));
+}
+
+// this can be easily optimised by partially calculating the allfieldsum
+state_t stepchange_w(world_t world, ix_t ix) {
+  switch (allfieldsum_w(world, ix)) {
+    case 3:
+      return ALIVE;
+    case 4:
+      return UNCHANGED;
+    default:
+      return DEAD;
+  }
 }
 
 world_t gardenofeden6_w(world_t world, ix_t ix) {

@@ -1,7 +1,7 @@
 // COMS20001 - Cellular Automaton Farm - Initial Code Skeleton
 // (using the XMOS i2c accelerometer demo code)
-#include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <stdio.h>
 #include <platform.h>
 #include <xs1.h>
@@ -22,7 +22,7 @@ on tile[0]: out  port p_leds    = XS1_PORT_4F; //port to access xCore-200 LEDs
 void distributor(chanend ori, chanend but) {
   uint8_t val;
   uint8_t D1 = 1; // green flash state
-  uint8_t line[IMWD];
+  bit line[IMWD];
   timer t;
   uint32_t start = 0;
   uint32_t stop = 0;
@@ -48,9 +48,7 @@ void distributor(chanend ori, chanend but) {
   }
   _closeinpgm();
 
-  // world = block_w(world, new_ix(1, 1));
-
-  world = flip_w(world);
+  // world = block_w(world, new_ix(0, 0));
 
   printworld_w(world);
   // printworldcode_w(world, 1);
@@ -110,13 +108,43 @@ void distributor(chanend ori, chanend but) {
     }
 
     // do work
-    for (int y = 0; y < IMHT; y++) {
-      for (int x = 0; x < IMWD; x++) {
-        ix_t ix = new_ix(y, x);
-        world = set_w(world, ix, step_w(world, ix));
+    // write top result to buffer[2]
+    for (int c = 0; c < IMWD; c++) {
+      if (step_w(world, new_ix(0, c))) {
+        BITSETM(world.buffer, 2, c, IMWD);
+      } else {
+        BITCLEARM(world.buffer, 2, c, IMWD);
       }
     }
-    world = flip_w(world);
+    // calculate row 1 into buffer[1]
+    for (int c = 0; c < IMWD; c++) {
+      if (step_w(world, new_ix(1, c))) {
+        BITSETM(world.buffer, 1, c, IMWD);
+      } else {
+        BITCLEARM(world.buffer, 1, c, IMWD);
+      }
+    }
+    // rest of the rows
+    for (int r = 2; r < IMHT; r++) {
+      // update row into buffer[r%2]
+      for (int c = 0; c < IMWD; c++) {
+        if (step_w(world, new_ix(r, c))) {
+          BITSETM(world.buffer, r % 2, c, IMWD);
+        } else {
+          BITCLEARM(world.buffer, r % 2, c, IMWD);
+        }
+      }
+      // writeback
+      for (int c = 0; c < IMWD; c++) {
+        world = set_w(world, new_ix(r-1, c), BITTESTM(world.buffer, (r+1)%2, c, IMWD));
+      }
+    }
+    // put top and last result from buffer
+    for (int c = 0; c < IMWD; c++) {
+      world = set_w(world, new_ix(0, c), BITTESTM(world.buffer, 2, c, IMWD));
+      world = set_w(world, new_ix(IMHT - 1, c), BITTESTM(world.buffer, (IMHT - 1) % 2, c, IMWD));
+    }
+
     // printworld_w(world);
   }
 }
@@ -200,59 +228,19 @@ int main(void) {
     on tile[0]: distributor(c_ori, c_but);                 // thread to coordinate work on image
   }
 
-//
-//   #define W 33
-//   #define H 33
-//
-//   // bits bitarray[H][BITNSLOTS(W)];
-//   bits bitarray[BITNSLOTSM(H, W)];
-//   timer t;
-//   uint32_t start;
-//   uint32_t stop;
-//
-//   for (int i = 0; i < H; i++) {
-//     for (int j = 0; j < H; j++) {
-//       BITCLEARM(bitarray, i, j, H);
-//     }
-//   }
-//
-//   t :> start;
-//   t :> stop;
-//
-//   printf("%d0\n", stop - start);
-//   printf("%d, %d\n", sizeof(bits), 8);
-//   // for (int i = 0, x = 0; i < 33; i++) {
-//   //   for (int j = 0; j < 33; j++, x++) {
-//   //     if (x % 2 == 0) {
-//   //       BITSETM(bitarray, i, j, H);
-//   //     }
-//   //   }
-//   // }
-//
-//   for (int i = 0; i < H; i++) {
-//     for (int j = 0; j < W; j++) {
-//       if (BITTESTM(bitarray, i, j, H)) {
-//         BITCLEARM(bitarray, i, j, H);
-//       } else {
-//         BITSETM(bitarray, i, j, H);
-//       }
-//     }
-//   }
-//
-//   for (int i = 0; i < 32; i++) {
-//     BITCLEARM(bitarray, 0,   i,   H);
-//     BITCLEARM(bitarray, i+1, 0,   H);
-//     BITCLEARM(bitarray, i,   32,  H);
-//     BITCLEARM(bitarray, 32,  i+1, H);
-//   }
-//
-//   for (int i = 0; i < H; i++) {
-//     for (int j = 0; j < W; j++) {
-//       printf("%c", BITTESTM(bitarray, i, j, H) == 0 ? 219 : 176);
-//     }
-//     printf("\n");
-//   }
-//   BITTESTM(bitarray, 32, 32+7, H);
+  // world_t world = blank_w();
+  // // printbuffer_w(world);
+  // //
+  // BITSETM(world.buffer, 0, 3, IMWD);
+  // BITSETM(world.buffer, 2, 0, IMWD);
+  // printbuffer_w(world);
+  //
+  // // for (int i = 0; i < 3; i++) {
+  // //   BITCLEARM(bitarray, 0,   i,   H);
+  // //   BITCLEARM(bitarray, i+1, 0,   H);
+  // //   BITCLEARM(bitarray, i,   3,  H);
+  // //   BITCLEARM(bitarray, 3,  i+1, H);
+  // // }
 
   // currently the program will never stop, the io thread does not support graceful shutdown
 

@@ -6,6 +6,12 @@
 #include "constants.h"
 #include "bitmatrix.h"
 
+typedef enum CellState {
+  ALIVE,
+  DEAD,
+  UNCHANGED,
+} state_t;
+
 // index
 typedef struct Ix {
   uint16_t r;
@@ -14,8 +20,8 @@ typedef struct Ix {
 
 // cellular world
 typedef struct World {
-  uint8_t active;
-  uint8_t hash[2][BITNSLOTSM(IMHT, IMWD)];
+  bit buffer[BITNSLOTSM(3, IMWD)]; // buffer 0 and 1 for working, buffer 2 for top
+  bit hash[BITNSLOTSM(IMHT, IMWD)];
 } world_t;
 
 // creates a new ix_t
@@ -30,11 +36,14 @@ void print_ix(ix_t ix);
 // prints the active hash of the world
 void printworld_w(world_t world);
 
+// prints the world buffer
+void printbuffer_w(world_t world);
+
 // prints the code needed to set a world
-void printworldcode_w(world_t world, uint8_t onlyalive);
+void printworldcode_w(world_t world, bit onlyalive);
 
 // checks if the active hash of the world is alive
-uint8_t isalive_w(world_t world, ix_t ix);
+bit isalive_w(world_t world, ix_t ix);
 
 // sets the hash for the inactive cell to be alive
 world_t setalive_w(world_t world, ix_t ix);
@@ -43,19 +52,19 @@ world_t setalive_w(world_t world, ix_t ix);
 world_t setdead_w(world_t world, ix_t ix);
 
 // calls setalive_w or setdead_w depending on the alive argument
-world_t set_w(world_t world, ix_t ix, uint8_t alive);
-
-// flips the world hash
-world_t flip_w(world_t world);
+world_t set_w(world_t world, ix_t ix, bit alive);
 
 // returns the number of neighbours in the moore boundary of a cell in the
 // active hash
-uint8_t mooreneighbours_w(world_t world, ix_t ix);
+bit mooreneighbours_w(world_t world, ix_t ix);
+
+// all-field sum includes the current position
+bit allfieldsum_w(world_t world, ix_t ix);
 
 // returns the next iteratation of a cell in the active hash according to the
 // rules of game of life
 // if you wanted to change the rules, here would be the place to change it
-uint8_t step_w(world_t world, ix_t ix);
+bit step_w(world_t world, ix_t ix);
 
 // sets the cells to be equal to pattern at the position specified
 world_t gardenofeden6_w(world_t world, ix_t ix);
