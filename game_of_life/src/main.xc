@@ -44,14 +44,14 @@ void distributor(chanend ori, chanend but) {
     for (int r = OFHT; r < IMHT; r++) {
       _readinline(line, IMWD);
       for (int c = OFWD; c < IMWD; c++) {
-        set_w(world, new_ix(r, c), line[c]);
+        set_w(world, r, c, line[c]);
       }
     }
   }
   _closeinpgm();
 
-  // world = random_w(world, new_ix(0, 0), new_ix(WDHT, WDWD), 0);
-  // world = randperlin_w(world, new_ix(0, 0), new_ix(WDHT, WDWD), new_ix(0, 0), 0.1, 4, 0);
+  // world = random_w(world, 0, 0, WDHT, WDWD, 0);
+  // world = randperlin_w(world, 0, 0, WDHT, WDWD, 0, 0, 0.1, 4, 0);
   printworld_w(world);
   // printworldcode_w(world, 1);
 
@@ -77,7 +77,7 @@ void distributor(chanend ori, chanend but) {
         } else {
           for (int y = 0; y < IMHT; y++) {
             for (int x = 0; x < IMWD; x++) {
-              if (isalive_w(world, new_ix(y, x))) {
+              if (isalive_w(world, y, x)) {
                 line[x] = ~0;
               } else {
                 line[x] = 0;
@@ -104,22 +104,22 @@ void distributor(chanend ori, chanend but) {
     // do work
     alive = 0;
     // copy wrap
-    set_w(world, new_ix(-1,      -1), isalive_w(world, new_ix(IMHT - 1, IMWD - 1)));
-    set_w(world, new_ix(-1,    IMWD), isalive_w(world ,new_ix(IMHT - 1,        0)));
-    set_w(world, new_ix(IMHT,    -1), isalive_w(world ,new_ix(0,        IMWD - 1)));
-    set_w(world, new_ix(IMHT,  IMWD), isalive_w(world ,new_ix(0,               0)));
+    set_w(world, -1,      -1, isalive_w(world,IMHT - 1, IMWD - 1));
+    set_w(world, -1,    IMWD, isalive_w(world,IMHT - 1,        0));
+    set_w(world, IMHT,    -1, isalive_w(world,0,        IMWD - 1));
+    set_w(world, IMHT,  IMWD, isalive_w(world,0,               0));
     for (int i = 0; i < IMWD; i++) {
-      set_w(world, new_ix(-1,   i), isalive_w(world, new_ix(IMHT - 1, i)));
-      set_w(world, new_ix(IMHT, i), isalive_w(world, new_ix(0,        i)));
+      set_w(world, -1,   i, isalive_w(world, IMHT - 1, i));
+      set_w(world, IMHT, i, isalive_w(world, 0,        i));
     }
     for (int i = 0; i < IMWD; i++) {
-      set_w(world, new_ix(i,   -1), isalive_w(world, new_ix(i, IMWD - 1)));
-      set_w(world, new_ix(i, IMWD), isalive_w(world, new_ix(i,        0)));
+      set_w(world, i,   -1, isalive_w(world, i, IMWD - 1));
+      set_w(world, i, IMWD, isalive_w(world, i,        0));
     }
     // write top result to buffer[2]
     // calculate row 1 into buffer[1]
     for (int c = 0; c < WDWD; c++) {
-      if (step_w(world, new_ix(0, c))) {
+      if (step_w(world, 0, c)) {
         BITSETM(buffer, 2, c, WDWD);
         alive++;
       } else {
@@ -129,27 +129,27 @@ void distributor(chanend ori, chanend but) {
     // rest of the rows
     for (int r = 1; r < WDHT; r++) {
       // update row into buffer[r%2] and writeback from buffer[(r-1)%2]
-      if (step_w(world, new_ix(r, 0))) {
+      if (step_w(world, r, 0)) {
         BITSETM(buffer, r % 2, 0, WDWD);
         alive++;
       } else {
         BITCLEARM(buffer, r % 2, 0, WDWD);
       }
       for (int c = 1; c < WDWD; c++) {
-        if (step_w(world, new_ix(r, c))) {
+        if (step_w(world, r, c)) {
           BITSETM(buffer, r % 2, c, WDWD);
           alive++;
         } else {
           BITCLEARM(buffer, r % 2, c, WDWD);
         }
-        set_w(world, new_ix(r - 1, c - 1), BITTESTM(buffer, (r - 1) % 2, c - 1, WDWD));
+        set_w(world, r - 1, c - 1, BITTESTM(buffer, (r - 1) % 2, c - 1, WDWD));
       }
-      set_w(world, new_ix(r - 1, WDWD - 1), BITTESTM(buffer, (r - 1) % 2, WDWD - 1, WDWD));
+      set_w(world, r - 1, WDWD - 1, BITTESTM(buffer, (r - 1) % 2, WDWD - 1, WDWD));
     }
     // put top and last result from buffer
     for (int c = 0; c < WDWD; c++) {
-      set_w(world, new_ix(0, c), BITTESTM(buffer, 2, c, IMWD));
-      set_w(world, new_ix(WDHT - 1, c), BITTESTM(buffer, (IMHT - 1) % 2, c, IMWD));
+      set_w(world, 0, c, BITTESTM(buffer, 2, c, IMWD));
+      set_w(world, WDHT - 1, c, BITTESTM(buffer, (IMHT - 1) % 2, c, IMWD));
     }
     // printworld_w(world);
   }
