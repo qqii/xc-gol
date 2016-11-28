@@ -61,10 +61,10 @@ void printworldcode_w(world_t world, bit onlyalive) {
   }
 }
 
-// world_t hashes are packed into bits, thus we need to extract them
-bit isalive_w(world_t world, ix_t ix) {
-  return BITTESTM(world.hash, ix.r + 1, ix.c + 1, WDWD + 2);
-}
+// // world_t hashes are packed into bits, thus we need to extract them
+// bit isalive_w(world_t world, ix_t ix) {
+//   return BITTESTM(world.hash, ix.r + 1, ix.c + 1, WDWD + 2);
+// }
 
 // set the inactive hash to make sure the world is kept in sync
 inline world_t setalive_w(world_t world, ix_t ix) {
@@ -77,31 +77,31 @@ inline world_t setdead_w(world_t world, ix_t ix) {
   return world;
 }
 
-world_t set_w(world_t world, ix_t ix, bit alive) {
-  if (alive) {
-    BITSETM(world.hash, ix.r + 1, ix.c + 1, WDWD + 2);
-  } else {
-    BITCLEARM(world.hash, ix.r + 1, ix.c + 1, WDWD + 2);
-  }
-  return world;
-}
+// world_t set_w(world_t world, ix_t ix, bit alive) {
+//   if (alive) {
+//     BITSETM(world.hash, ix.r + 1, ix.c + 1, WDWD + 2);
+//   } else {
+//     BITCLEARM(world.hash, ix.r + 1, ix.c + 1, WDWD + 2);
+//   }
+//   return world;
+// }
 
 // doesn't use pmod since new_ix only takes bit thus -1 will cause errors
 // instead of doing -1, we do +world.bounds.x-1 which is the same effect
 // this code is pretty slow and could be sped up using some if statements to
 // only perform the wrap when on the boundary
-uint8_t mooreneighbours_w(world_t world, ix_t ix) {
-  bit i = 0;
-  i += isalive_w(world, new_ix(ix.r - 1, ix.c - 1));
-  i += isalive_w(world, new_ix(ix.r - 1, ix.c    ));
-  i += isalive_w(world, new_ix(ix.r - 1, ix.c + 1));
-  i += isalive_w(world, new_ix(ix.r,     ix.c - 1));
-  i += isalive_w(world, new_ix(ix.r,     ix.c + 1));
-  i += isalive_w(world, new_ix(ix.r + 1, ix.c - 1));
-  i += isalive_w(world, new_ix(ix.r + 1, ix.c    ));
-  i += isalive_w(world, new_ix(ix.r + 1, ix.c + 1));
-  return i;
-}
+// uint8_t mooreneighbours_w(world_t world, ix_t ix) {
+//   bit i = 0;
+//   i += isalive_w(world, new_ix(ix.r - 1, ix.c - 1));
+//   i += isalive_w(world, new_ix(ix.r - 1, ix.c    ));
+//   i += isalive_w(world, new_ix(ix.r - 1, ix.c + 1));
+//   i += isalive_w(world, new_ix(ix.r,     ix.c - 1));
+//   i += isalive_w(world, new_ix(ix.r,     ix.c + 1));
+//   i += isalive_w(world, new_ix(ix.r + 1, ix.c - 1));
+//   i += isalive_w(world, new_ix(ix.r + 1, ix.c    ));
+//   i += isalive_w(world, new_ix(ix.r + 1, ix.c + 1));
+//   return i;
+// }
 
 uint8_t allfieldsum_w(world_t world, ix_t ix) {
   bit i = isalive_w(world, ix);
@@ -140,11 +140,7 @@ world_t random_w(world_t world, ix_t start, ix_t end, uint32_t seed) {
   srand(seed);
   for (int r = start.r; r < end.r; r++) {
     for (int c = start.c; c < end.c; c++) {
-      if (rand() > RAND_MAX / 2) {
-        world = set_w(world, new_ix(r, c), 1);
-      } else {
-        world = set_w(world, new_ix(r, c), 0);
-      }
+      set_w(world, new_ix(r, c), rand() > RAND_MAX / 2);
     }
   }
   return world;
@@ -153,11 +149,7 @@ world_t random_w(world_t world, ix_t start, ix_t end, uint32_t seed) {
 world_t checkboard_w(world_t world, ix_t start, ix_t end) {
   for (int r = start.r, x = 0; r < end.r; r++) {
     for (int c = start.c; c < end.c; c++, x++) {
-      if (x % 2 == 0) {
-        world = set_w(world, new_ix(r, c), 1);
-      } else {
-        world = set_w(world, new_ix(r, c), 0);
-      }
+      set_w(world, new_ix(r, c), x % 2 == 0);
     }
     if ((end.c - start.c) % 2 == 0) {
       x++;

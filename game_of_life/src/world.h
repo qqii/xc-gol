@@ -39,7 +39,8 @@ void printworld_w(world_t world);
 void printworldcode_w(world_t world, bit onlyalive);
 
 // checks if the active hash of the world is alive
-bit isalive_w(world_t world, ix_t ix);
+// bit isalive_w(world_t world, ix_t ix);
+#define isalive_w(world, ix) (BITTESTM((world).hash, (ix).r + 1, (ix).c + 1, WDWD + 2))
 
 // sets the hash for the inactive cell to be alive
 world_t setalive_w(world_t world, ix_t ix);
@@ -48,11 +49,13 @@ world_t setalive_w(world_t world, ix_t ix);
 world_t setdead_w(world_t world, ix_t ix);
 
 // calls setalive_w or setdead_w depending on the alive argument
-world_t set_w(world_t world, ix_t ix, bit alive);
+// world_t set_w(world_t world, ix_t ix, bit alive);
+#define set_w(world, ix, alive) if (alive) { BITSETM((world).hash, (ix).r + 1, (ix).c + 1, WDWD + 2); } else { BITCLEARM((world).hash, (ix).r + 1, (ix).c + 1, WDWD + 2); }
 
 // returns the number of neighbours in the moore boundary of a cell in the
 // active hash
-uint8_t mooreneighbours_w(world_t world, ix_t ix);
+// uint8_t mooreneighbours_w(world_t world, ix_t ix);
+#define mooreneighbours_w(world, ix) (isalive_w((world), new_ix((ix).r - 1, (ix).c - 1)) + isalive_w((world), new_ix((ix).r - 1, (ix).c)) + isalive_w((world), new_ix((ix).r - 1, (ix).c + 1)) + isalive_w((world), new_ix((ix).r, (ix).c - 1)) + isalive_w((world), new_ix((ix).r, (ix).c + 1)) + isalive_w((world), new_ix((ix).r + 1, (ix).c - 1)) + isalive_w((world), new_ix((ix).r + 1, (ix).c)) + isalive_w((world), new_ix((ix).r + 1, (ix).c + 1)))
 
 // all-field sum includes the current position
 uint8_t allfieldsum_w(world_t world, ix_t ix);
@@ -61,6 +64,7 @@ uint8_t allfieldsum_w(world_t world, ix_t ix);
 // rules of game of life
 // if you wanted to change the rules, here would be the place to change it
 bit step_w(world_t world, ix_t ix);
+// #define step_w(world, ix) (mooreneighbours_w((world), (ix)) == 3 || (mooreneighbours_w((world), (ix)) == 2 && isalive_w((world), (ix))))
 
 state_t stepchange_w(world_t world, ix_t ix);
 

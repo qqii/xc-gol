@@ -13,8 +13,8 @@
 #define OFWD 0
 
 // world height
-#define WDHT IMHT
-#define WDWD IMWD
+#define WDHT 16
+#define WDWD 16
 
 // UNTILT_THRESHOLD < TILT_THRESHOLD to avoid it detecting multiple times
 #define TILT_THRESHOLD   30

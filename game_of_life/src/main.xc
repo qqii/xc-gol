@@ -44,7 +44,7 @@ void distributor(chanend ori, chanend but) {
     for (int r = OFHT; r < IMHT; r++) {
       _readinline(line, IMWD);
       for (int c = OFWD; c < IMWD; c++) {
-        world = set_w(world, new_ix(r, c), line[c]);
+        set_w(world, new_ix(r, c), line[c]);
       }
     }
   }
@@ -56,7 +56,7 @@ void distributor(chanend ori, chanend but) {
   // printworldcode_w(world, 1);
 
   t :> start;
-  for (uintmax_t i = 0;; i++) {
+  for (uintmax_t i = 0; i < 1000; i++) {
     select {
       case ori :> val:
         t :> stop;
@@ -104,17 +104,17 @@ void distributor(chanend ori, chanend but) {
     // do work
     alive = 0;
     // copy wrap
-    world = set_w(world, new_ix(-1,      -1), isalive_w(world, new_ix(IMHT - 1, IMWD - 1)));
-    world = set_w(world, new_ix(-1,    IMWD), isalive_w(world ,new_ix(IMHT - 1,        0)));
-    world = set_w(world, new_ix(IMHT,    -1), isalive_w(world ,new_ix(0,        IMWD - 1)));
-    world = set_w(world, new_ix(IMHT,  IMWD), isalive_w(world ,new_ix(0,               0)));
+    set_w(world, new_ix(-1,      -1), isalive_w(world, new_ix(IMHT - 1, IMWD - 1)));
+    set_w(world, new_ix(-1,    IMWD), isalive_w(world ,new_ix(IMHT - 1,        0)));
+    set_w(world, new_ix(IMHT,    -1), isalive_w(world ,new_ix(0,        IMWD - 1)));
+    set_w(world, new_ix(IMHT,  IMWD), isalive_w(world ,new_ix(0,               0)));
     for (int i = 0; i < IMWD; i++) {
-      world = set_w(world, new_ix(-1,   i), isalive_w(world, new_ix(IMHT - 1, i)));
-      world = set_w(world, new_ix(IMHT, i), isalive_w(world, new_ix(0,        i)));
+      set_w(world, new_ix(-1,   i), isalive_w(world, new_ix(IMHT - 1, i)));
+      set_w(world, new_ix(IMHT, i), isalive_w(world, new_ix(0,        i)));
     }
     for (int i = 0; i < IMWD; i++) {
-      world = set_w(world, new_ix(i,   -1), isalive_w(world, new_ix(i, IMWD - 1)));
-      world = set_w(world, new_ix(i, IMWD), isalive_w(world, new_ix(i,        0)));
+      set_w(world, new_ix(i,   -1), isalive_w(world, new_ix(i, IMWD - 1)));
+      set_w(world, new_ix(i, IMWD), isalive_w(world, new_ix(i,        0)));
     }
     // write top result to buffer[2]
     // calculate row 1 into buffer[1]
@@ -142,17 +142,20 @@ void distributor(chanend ori, chanend but) {
         } else {
           BITCLEARM(buffer, r % 2, c, WDWD);
         }
-        world = set_w(world, new_ix(r - 1, c - 1), BITTESTM(buffer, (r - 1) % 2, c - 1, WDWD));
+        set_w(world, new_ix(r - 1, c - 1), BITTESTM(buffer, (r - 1) % 2, c - 1, WDWD));
       }
-      world = set_w(world, new_ix(r - 1, WDWD - 1), BITTESTM(buffer, (r - 1) % 2, WDWD - 1, WDWD));
+      set_w(world, new_ix(r - 1, WDWD - 1), BITTESTM(buffer, (r - 1) % 2, WDWD - 1, WDWD));
     }
     // put top and last result from buffer
     for (int c = 0; c < WDWD; c++) {
-      world = set_w(world, new_ix(0, c), BITTESTM(buffer, 2, c, IMWD));
-      world = set_w(world, new_ix(WDHT - 1, c), BITTESTM(buffer, (IMHT - 1) % 2, c, IMWD));
+      set_w(world, new_ix(0, c), BITTESTM(buffer, 2, c, IMWD));
+      set_w(world, new_ix(WDHT - 1, c), BITTESTM(buffer, (IMHT - 1) % 2, c, IMWD));
     }
     // printworld_w(world);
   }
+  t :> stop;
+  printf("Elapsed Time (ns): %lu0\t", stop - start);
+  printworld_w(world);
 }
 // Initialise and  read orientation, send first tilt event to channel
 void orientation(client interface i2c_master_if i2c, chanend toDist) {
