@@ -1,7 +1,6 @@
 // COMS20001 - Cellular Automaton Farm - Initial Code Skeleton
 // (using the XMOS i2c accelerometer demo code)
 #include <stdint.h>
-#include <string.h>
 #include <stdio.h>
 #include <platform.h>
 #include <xs1.h>
@@ -10,14 +9,13 @@
 #include "constants.h"
 #include "world.h"
 
-#include <stdlib.h>
-
 // interface ports to orientation
 on tile[0]: port p_scl = XS1_PORT_1E;
 on tile[0]: port p_sda = XS1_PORT_1F;
 //  both of these must be on port 0
 on tile[0]: in   port p_buttons = XS1_PORT_4E; //port to access xCore-200 buttons
 on tile[0]: out  port p_leds    = XS1_PORT_4F; //port to access xCore-200 LEDs
+
 // main concurrent thread
 void distributor(chanend ori, chanend but) {
   uint8_t val;
@@ -50,7 +48,7 @@ void distributor(chanend ori, chanend but) {
   _closeinpgm();
 
   // world = random_w(world, new_ix(0, 0), new_ix(WDHT, WDWD), 0);
-  world = randperlin_w(world, new_ix(0, 0), new_ix(WDHT, WDWD), new_ix(0, 0), 0.1, 4, 0);
+  // world = randperlin_w(world, new_ix(0, 0), new_ix(WDHT, WDWD), new_ix(0, 0), 0.1, 4, 0);
   printworld_w(world);
   // printworldcode_w(world, 1);
 
@@ -119,14 +117,13 @@ void distributor(chanend ori, chanend but) {
     }
     // rest of the rows
     for (int r = 2; r < WDHT; r++) {
-      // update row into buffer[r%2]
-      for (int c = 0; c < WDWD; c++) {
+      // update row into buffer[r%2] and writeback from buffer[(r-1)%2]
+      world = setbuffer_w(world, new_ix(r % 2, 0), step_w(world, new_ix(r, 0)));
+      for (int c = 1; c < WDWD; c++) {
         world = setbuffer_w(world, new_ix(r % 2, c), step_w(world, new_ix(r, c)));
+        world = set_w(world, new_ix(r - 1, c - 1), getbuffer_w(world, new_ix((r - 1) % 2, c - 1)));
       }
-      // writeback
-      for (int c = 0; c < WDWD; c++) {
-        world = set_w(world, new_ix(r-1, c), getbuffer_w(world, new_ix((r + 1) % 2, c)));
-      }
+      world = set_w(world, new_ix(r - 1, WDWD - 1), getbuffer_w(world, new_ix((r - 1) % 2, WDWD - 1)));
     }
     // put top and last result from buffer
     for (int c = 0; c < WDWD; c++) {
