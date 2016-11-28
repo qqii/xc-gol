@@ -276,11 +276,11 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
         }
         if (amount > 0){
           if (J == startRow){
-            firstCount = 1;
+            firstCount = 2;
           }
           //write to the working set
           else{
-            countQueue[wset_mid] = 1;
+            countQueue[wset_mid] = 2;
           }
         }
         else{
@@ -428,58 +428,18 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend fromAcc, chanend c_
 
         // update the row counts to mark adjacent rows
         //do the top row
-        uint16_t rowBelow = 1;
-        uint16_t rowAbove = IMHT - 1;
 
-        if (rowCounts[0] == 1){
-          totalRows++;
-          if (rowCounts[rowAbove] == 0){
-            rowCounts[rowAbove] = 2;
-            totalRows++;
-          }
-          if (rowCounts[rowBelow] == 0){
-            rowCounts[rowBelow] = 2;
-            totalRows++;
+        for (int R = 0; R < IMHT; R++){
+          if (rowCounts[R] > 1){
+            rowCounts[(R + 1) % IMHT] += 1;
+            rowCounts[((R - 1) % IMHT + IMHT) % IMHT] += 1;
           }
         }
 
-        //do the middle rows
-        for (int R = 1; R < IMHT - 1; R++){
-          rowAbove = R - 1;
-          rowBelow = R + 1;
-          if (R == 0){
-            rowAbove = IMHT - 1;
-          }
-          if (R == IMHT - 1){
-            rowBelow = 0;
-          }
-
-          if (rowCounts[R] == 1){
+        for (int R = 0; R < IMHT; R++){
+          if (rowCounts[R] > 0){
             totalRows++;
-            if (rowCounts[rowAbove] == 0){
-              rowCounts[rowAbove] = 2;
-              totalRows++;
-            }
-            if (rowCounts[rowBelow] == 0){
-              rowCounts[rowBelow] = 2;
-              totalRows++;
-            }
-          }
-        }
-
-        //do the bottom row
-        rowAbove = IMHT - 2;
-        rowBelow = 0;
-
-        if (rowCounts[IMHT - 1] == 1){
-          totalRows++;
-          if (rowCounts[rowAbove] == 0){
-            rowCounts[rowAbove] = 2;
-            totalRows++;
-          }
-          if (rowCounts[rowBelow] == 0){
-            rowCounts[rowBelow] = 2;
-            totalRows++;
+            rowCounts[R] = 1;
           }
         }
 
