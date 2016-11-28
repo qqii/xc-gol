@@ -11,6 +11,6 @@
 #define WCOUNT 7
 
 // number of iterations to run
-#define ITERATIONS 1024*10
+#define ITERATIONS 16384
 
 #endif
