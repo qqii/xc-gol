@@ -1,7 +1,7 @@
 // COMS20001 - Cellular Automaton Farm - Initial Code Skeleton
 // (using the XMOS i2c accelerometer demo code)
-#include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <stdio.h>
 #include <platform.h>
 #include <xs1.h>
@@ -22,10 +22,11 @@ on tile[0]: out  port p_leds    = XS1_PORT_4F; //port to access xCore-200 LEDs
 unsafe void distributor(chanend ori, chanend but) {
   uint8_t val;
   uint8_t D1 = 1; // green flash state
-  uint8_t line[IMWD];
+  bit line[IMWD];
   timer t;
   uint32_t start = 0;
   uint32_t stop = 0;
+  bit buffer[BITNSLOTSM(3, IMWD)];
   world_t world;
   blank_w(&world);
 
@@ -42,17 +43,15 @@ unsafe void distributor(chanend ori, chanend but) {
     return;
   }
   // Read image line-by-line and send byte by byte to channel ch
-  for (int y = 0; y < 10; y++) {
+  for (int y = 0; y < IMHT; y++) {
     _readinline(line, IMWD);
-    for (int x = 0; x < 10; x++) {
+    for (int x = 0; x < IMWD; x++) {
       set_w(&world, new_ix(y, x), line[x]);
     }
   }
   _closeinpgm();
 
-  // tumbler_w(&world, new_ix(4, 4));
-
-  flip_w(&world);
+  // block_w(&world, new_ix(0, 0));
 
   printworld_w(&world);
   // printworldcode_w(&world, 1);
@@ -112,15 +111,62 @@ unsafe void distributor(chanend ori, chanend but) {
     }
 
     // do work
-    for (int y = 0; y < IMHT; y++) {
-      for (int x = 0; x < IMWD; x++) {
-        ix_t ix = new_ix(y, x);
-        uint8_t step = step_w(&world, ix);
-        set_w(&world, ix, step);
+    // copy wrap
+    val = isalive_w(&world, new_ix(IMHT - 1, IMWD - 1));
+    set_w(&world, new_ix(-1, -1), val);
+    val = isalive_w(&world ,new_ix(IMHT - 1, 0));
+    set_w(&world, new_ix(-1, IMWD), val);
+    val = isalive_w(&world ,new_ix(0, IMWD - 1));
+    set_w(&world, new_ix(IMHT, -1), val);
+    val = isalive_w(&world ,new_ix(0, 0));
+    set_w(&world, new_ix(IMHT, IMWD), val);
+    for (int i = 0; i < IMWD; i++) {
+      val = isalive_w(&world, new_ix(IMHT - 1, i));
+      set_w(&world, new_ix(-1, i), val);
+      val = isalive_w(&world, new_ix(0, i));
+      set_w(&world, new_ix(IMHT, i), val);
+    }
+    for (int i = 0; i < IMWD; i++) {
+      val = isalive_w(&world, new_ix(i, IMWD - 1));
+      set_w(&world, new_ix(i, -1), val);
+      val = isalive_w(&world, new_ix(i, 0));
+      set_w(&world, new_ix(i, IMWD), val);
+    }
+    // write top result to buffer[2]
+    // calculate row 1 into buffer[1]
+    for (int c = 0; c < IMWD; c++) {
+      if (step_w(&world, new_ix(0, c))) {
+        BITSETM(buffer, 2, c, IMWD);
+      } else {
+        BITCLEARM(buffer, 2, c, IMWD);
+      }
+      if (step_w(&world, new_ix(1, c))) {
+        BITSETM(buffer, 1, c, IMWD);
+      } else {
+        BITCLEARM(buffer, 1, c, IMWD);
       }
     }
-    flip_w(&world);
-    // printworld_w(world);
+    // rest of the rows
+    for (int r = 2; r < IMHT; r++) {
+      // update row into buffer[r%2]
+      for (int c = 0; c < IMWD; c++) {
+        if (step_w(&world, new_ix(r, c))) {
+          BITSETM(buffer, r % 2, c, IMWD);
+        } else {
+          BITCLEARM(buffer, r % 2, c, IMWD);
+        }
+      }
+      // writeback
+      for (int c = 0; c < IMWD; c++) {
+        set_w(&world, new_ix(r-1, c), BITTESTM(buffer, (r+1)%2, c, IMWD));
+      }
+    }
+    // put top and last result from buffer
+    for (int c = 0; c < IMWD; c++) {
+      set_w(&world, new_ix(0, c), BITTESTM(buffer, 2, c, IMWD));
+      set_w(&world, new_ix(IMHT - 1, c), BITTESTM(buffer, (IMHT - 1) % 2, c, IMWD));
+    }
+    // printworld_w(&world);
   }
 }
 
@@ -194,7 +240,7 @@ void button(in port b, chanend toDist) {
 // Orchestrate concurrent system and start up all threads
 unsafe int main(void) {
   i2c_master_if i2c[1]; //interface to orientation
-  chan c_ori, c_but;            // io channel
+  chan c_but, c_ori;
 
   par {
     on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10); // server thread providing orientation data
@@ -203,6 +249,21 @@ unsafe int main(void) {
     on tile[0]: distributor(c_ori, c_but);                 // thread to coordinate work on image
   }
 
-  // currently there is no graceful shutdown
+  // world_t blank_w();
+  // // printbuffer_w(world);
+  // //
+  // BITSETM(world.buffer, 0, 3, IMWD);
+  // BITSETM(world.buffer, 2, 0, IMWD);
+  // printbuffer_w(world);
+  //
+  // // for (int i = 0; i < 3; i++) {
+  // //   BITCLEARM(bitarray, 0,   i,   H);
+  // //   BITCLEARM(bitarray, i+1, 0,   H);
+  // //   BITCLEARM(bitarray, i,   3,  H);
+  // //   BITCLEARM(bitarray, 3,  i+1, H);
+  // // }
+
+  // currently the program will never stop, the io thread does not support graceful shutdown
+
   return 0;
 }
