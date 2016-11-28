@@ -109,29 +109,48 @@ void distributor(chanend ori, chanend but) {
 
     // do work
     // write top result to buffer[2]
+    memcpy(world.buffer + (2 * IMWD/BIT_SIZE), world.hash, IMWD/BIT_SIZE);
     for (int c = 0; c < IMWD; c++) {
-      if (step_w(world, new_ix(0, c))) {
-        BITSETM(world.buffer, 2, c, IMWD);
-      } else {
-        BITCLEARM(world.buffer, 2, c, IMWD);
+      switch (allfieldsum_w(world, new_ix(0, c))) {
+        case 3:
+          BITSETM(world.buffer, 2, c, IMWD);
+          break;
+        case 4:
+          break;
+        default:
+          BITCLEARM(world.buffer, 2, c, IMWD);
+          break;
       }
     }
     // calculate row 1 into buffer[1]
+
+    memcpy(world.buffer + (1 * IMWD/BIT_SIZE), world.hash + IMWD/BIT_SIZE, IMWD/BIT_SIZE);
     for (int c = 0; c < IMWD; c++) {
-      if (step_w(world, new_ix(1, c))) {
-        BITSETM(world.buffer, 1, c, IMWD);
-      } else {
-        BITCLEARM(world.buffer, 1, c, IMWD);
+      switch (allfieldsum_w(world, new_ix(1, c))) {
+        case 3:
+          BITSETM(world.buffer, 1, c, IMWD);
+          break;
+        case 4:
+          break;
+        default:
+          BITCLEARM(world.buffer, 1, c, IMWD);
+          break;
       }
     }
     // rest of the rows
     for (int r = 2; r < IMHT; r++) {
       // update row into buffer[r%2]
+      memcpy(world.buffer + ((r%2) * IMWD/BIT_SIZE), world.hash + (r * IMWD/BIT_SIZE), IMWD/BIT_SIZE);
       for (int c = 0; c < IMWD; c++) {
-        if (step_w(world, new_ix(r, c))) {
-          BITSETM(world.buffer, r % 2, c, IMWD);
-        } else {
-          BITCLEARM(world.buffer, r % 2, c, IMWD);
+        switch (allfieldsum_w(world, new_ix(r, c))) {
+          case 3:
+            BITSETM(world.buffer, r % 2, c, IMWD);
+            break;
+          case 4:
+            break;
+          default:
+            BITCLEARM(world.buffer, r % 2, c, IMWD);
+            break;
         }
       }
       // writeback
