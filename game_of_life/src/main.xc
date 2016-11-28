@@ -2,6 +2,7 @@
 // (using the XMOS i2c accelerometer demo code)
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include <platform.h>
 #include <xs1.h>
 #include "i2c.h"
@@ -26,7 +27,8 @@ void distributor(chanend ori, chanend but) {
   uint32_t start = 0;
   uint32_t stop = 0;
   // world
-  world_t world = blank_w();
+  bit world[BITNSLOTSM(IMHT + 2, IMWD + 2)];
+  memset(world, 0, BITNSLOTSM(IMHT + 2, IMWD + 2));
   uint32_t alive = 0;
   bit buffer[BITNSLOTSM(3, IMWD)];
 
@@ -153,6 +155,7 @@ void distributor(chanend ori, chanend but) {
   printf("Elapsed Time (ns): %lu0\t", stop - start);
   printworld_w(world);
 }
+
 // Initialise and  read orientation, send first tilt event to channel
 void orientation(client interface i2c_master_if i2c, chanend toDist) {
   i2c_regop_res_t result;
