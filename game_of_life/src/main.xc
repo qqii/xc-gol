@@ -181,12 +181,12 @@ unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], uint16_t cellw
                 ((32*((*array)[cellLeft][cellBelow] & 1))) |
                 ((128*((*array)[cellLeft][cellh] & 1))) ;
   } 
-  else{ 
+  else{
     //bit wizardry 
-    data = (((*array)[cellw][cellAbove] & (7<<(cellwp - 1))) >> (cellwp - 1)) | //row above 
-                ((8*((*array)[cellw][cellBelow] & (7<<(cellwp - 1)))) >> (cellwp - 1)) | //row below 
-                ((64*((*array)[cellw][cellh] & (2<<(cellwp)))) >> (cellwp)) |  //to the left 
-                ((64*((*array)[cellw][cellh] & (1<<(cellwp - 1)))) >> (cellwp - 1)); //to the right 
+    data =      ((((*array)[cellw][cellAbove]  &   (7 << (cellwp - 1)  ))     )  >> (cellwp - 1))  | //row above 
+                ((((*array)[cellw][cellBelow]  &   (7 << (cellwp - 1)  )) << 3)  >> (cellwp - 1))  | //row below 
+                ((((*array)[cellw][cellh]      &   (2 << (cellwp)      )) << 6)  >> (cellwp))      |  //to the left 
+                ((((*array)[cellw][cellh]      &   (1 << (cellwp - 1)  )) << 6)  >> (cellwp - 1))  ; //to the right 
   }
 
   alive = hamming[data];
