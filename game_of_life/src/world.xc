@@ -8,7 +8,7 @@ void print_ix(int16_t r, int16_t c) {
   printf("{%d, %d}", r, c);
 }
 
-void printworld_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)]) {
+void printworld_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)]) {
   char alive = 219;
   char dead = 177; // to 178 for other block characters
   print_ix(WDHT, WDWD); // print_ix doesn't print a newline
@@ -21,7 +21,7 @@ void printworld_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)]) {
   }
 }
 
-void printworldcode_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], bit onlyalive) {
+void printworldcode_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], bit onlyalive) {
   uint16_t rm = ~0;
   uint16_t cm = ~0;
 
@@ -49,22 +49,22 @@ void printworldcode_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], bit onlyalive) {
 }
 
 // // world_t hashes are packed into bits, thus we need to extract them
-// bit isalive_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// bit isalive_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   return BITTESTM(hash, r + 1, c + 1, WDWD + 2);
 // }
 
 // set the inactive hash to make sure the world is kept in sync
-// inline world_t setalive_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// inline world_t setalive_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   BITSETM(hash, r + 1, c + 1, WDWD + 2);
 //   return world;
 // }
 
-// inline world_t setdead_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// inline world_t setdead_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   BITCLEARM(hash, r + 1, c + 1, WDWD + 2);
 //   return world;
 // }
 
-// world_t set_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c, bit alive) {
+// world_t set_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c, bit alive) {
 //   if (alive) {
 //     BITSETM(hash, r + 1, c + 1, WDWD + 2);
 //   } else {
@@ -77,7 +77,7 @@ void printworldcode_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], bit onlyalive) {
 // instead of doing -1, we do +world.bounds.x-1 which is the same effect
 // this code is pretty slow and could be sped up using some if statements to
 // only perform the wrap when on the boundary
-// uint8_t mooreneighbours_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// uint8_t mooreneighbours_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   bit i = 0;
 //   i += isalive_w(hash, r - 1, c - 1));
 //   i += isalive_w(hash, r - 1, c    ));
@@ -91,13 +91,13 @@ void printworldcode_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], bit onlyalive) {
 // }
 
 // rules for game of life
-bit step_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
-  bit neighbours = mooreneighbours_w(hash, r, c);
+// bit step_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
+//   bit neighbours = mooreneighbours_w(hash, r, c);
+//
+//   return neighbours == 3 || (neighbours == 2 && isalive_w(hash, r, c));
+// }
 
-  return neighbours == 3 || (neighbours == 2 && isalive_w(hash, r, c));
-}
-
-// world_t random_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t sr, int16_t sc, int16_t er, int16_t ec, uint32_t seed) {
+// world_t random_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t sr, int16_t sc, int16_t er, int16_t ec, uint32_t seed) {
 //   srand(seed);
 //   for (int r = sr; r < er; r++) {
 //     for (int c = sc; c < ec; c++) {
@@ -107,7 +107,7 @@ bit step_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
 //   return world;
 // }
 //
-// world_t checkboard_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t sr, int16_t sc, int16_t er, int16_t ec) {
+// world_t checkboard_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t sr, int16_t sc, int16_t er, int16_t ec) {
 //   for (int r = sr, x = 0; r < er; r++) {
 //     for (int c = sc; c < ec; c++, x++) {
 //       set_w(world, r, c, x % 2 == 0);
@@ -119,7 +119,7 @@ bit step_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
 //   return world;
 // }
 //
-// world_t gardenofeden6_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// world_t gardenofeden6_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   world = setalive_w(world, 0 + r, 1 + c);
 //   world = setalive_w(world, 0 + r, 3 + c);
 //   world = setalive_w(world, 0 + r, 4 + c);
@@ -180,7 +180,7 @@ bit step_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
 //   return world;
 // }
 //
-// world_t block_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// world_t block_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   world = setalive_w(world, 0 + r, 0 + c);
 //   world = setalive_w(world, 0 + r, 1 + c);
 //   world = setalive_w(world, 1 + r, 0 + c);
@@ -189,7 +189,7 @@ bit step_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
 //   return world;
 // }
 //
-// world_t beehive_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// world_t beehive_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   world = setalive_w(world, 0 + r, 1 + c);
 //   world = setalive_w(world, 0 + r, 2 + c);
 //   world = setalive_w(world, 1 + r, 0 + c);
@@ -200,7 +200,7 @@ bit step_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
 //   return world;
 // }
 //
-// world_t loaf_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// world_t loaf_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   world = setalive_w(world, 0 + r, 1 + c);
 //   world = setalive_w(world, 0 + r, 2 + c);
 //   world = setalive_w(world, 1 + r, 0 + c);
@@ -212,7 +212,7 @@ bit step_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
 //   return world;
 // }
 //
-// world_t boat_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// world_t boat_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   world = setalive_w(world, 0 + r, 0 + c);
 //   world = setalive_w(world, 0 + r, 1 + c);
 //   world = setalive_w(world, 1 + r, 0 + c);
@@ -222,7 +222,7 @@ bit step_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
 //   return world;
 // }
 //
-// world_t blinker0_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// world_t blinker0_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   world = setalive_w(world, 0 + r, 0 + c);
 //   world = setalive_w(world, 0 + r, 1 + c);
 //   world = setalive_w(world, 0 + r, 2 + c);
@@ -230,7 +230,7 @@ bit step_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
 //   return world;
 // }
 //
-// world_t blinker1_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// world_t blinker1_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   world = setalive_w(world, 0 + r, 0 + c);
 //   world = setalive_w(world, 1 + r, 0 + c);
 //   world = setalive_w(world, 2 + r, 0 + c);
@@ -238,14 +238,14 @@ bit step_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
 //   return world;
 // }
 //
-// world_t toad0_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// world_t toad0_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   world = blinker0_w(world, 0 + r, 1 + c);
 //   world = blinker0_w(world, 1 + r, 0 + c);
 //
 //   return world;
 // }
 //
-// world_t clock_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// world_t clock_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   world = setalive_w(world, 0 + r, 1 + c);
 //   world = setalive_w(world, 1 + r, 2 + c);
 //   world = setalive_w(world, 1 + r, 3 + c);
@@ -256,7 +256,7 @@ bit step_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
 //   return world;
 // }
 //
-// world_t tumbler_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// world_t tumbler_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   world = setalive_w(world, 0 + r, 1 + c);
 //   world = setalive_w(world, 0 + r, 5 + c);
 //   world = blinker1_w(world, 0 + r, 0 + c);
@@ -269,14 +269,14 @@ bit step_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
 //   return world;
 // }
 //
-// world_t beacon_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// world_t beacon_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   world = block_w(world, 0 + r, 0 + c);
 //   world = block_w(world, 2 + r, 2 + c);
 //
 //   return world;
 // }
 //
-// world_t pulsar_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// world_t pulsar_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   world = blinker0_w(world, 0 + r, 2 + c);
 //   world = blinker0_w(world, 0 + r, 8 + c);
 //   world = blinker0_w(world, 5 + r, 2 + c);
@@ -297,7 +297,7 @@ bit step_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
 //   return world;
 // }
 //
-// world_t pentadecathlon_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// world_t pentadecathlon_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   world = setalive_w(world, 0 + r, 2 + c);
 //   world = setalive_w(world, 0 + r, 7 + c);
 //   world = setalive_w(world, 1 + r, 0 + c);
@@ -314,7 +314,7 @@ bit step_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
 //   return world;
 // }
 //
-// world_t glider_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// world_t glider_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   world = setalive_w(world, 0 + r, 1 + c);
 //   world = setalive_w(world, 1 + r, 2 + c);
 //   world = setalive_w(world, 2 + r, 0 + c);
@@ -324,7 +324,7 @@ bit step_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
 //   return world;
 // }
 //
-// world_t lwss_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// world_t lwss_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   world = setalive_w(world, 0 + r, 0 + c);
 //   world = setalive_w(world, 0 + r, 3 + c);
 //   world = setalive_w(world, 2 + r, 0 + c);
@@ -334,7 +334,7 @@ bit step_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
 //   return world;
 // }
 //
-// world_t rpentomino_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// world_t rpentomino_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   world = setalive_w(world, 0 + r, 2 + c);
 //   world = setalive_w(world, 1 + r, 0 + c);
 //   world = blinker1_w(world, 0 + r, 1 + c);
@@ -342,7 +342,7 @@ bit step_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
 //   return world;
 // }
 //
-// world_t diehard_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// world_t diehard_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   world = setalive_w(world, 0 + r, 6 + c);
 //   world = setalive_w(world, 1 + r, 0 + c);
 //   world = setalive_w(world, 1 + r, 1 + c);
@@ -352,7 +352,7 @@ bit step_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
 //   return world;
 // }
 //
-// world_t acorn_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// world_t acorn_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   world = setalive_w(world, 0 + r, 1 + c);
 //   world = setalive_w(world, 1 + r, 3 + c);
 //   world = setalive_w(world, 2 + r, 0 + c);
@@ -362,7 +362,7 @@ bit step_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
 //   return world;
 // }
 //
-// world_t glidergun_w(bit hash[BITNSLOTSM(IMHT + 2, IMWD + 2)], int16_t r, int16_t c) {
+// world_t glidergun_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   world = setalive_w(world, 0 + r, 24 + c);
 //   world = setalive_w(world, 1 + r, 22 + c);
 //   world = setalive_w(world, 1 + r, 24 + c);

@@ -25,10 +25,10 @@ void distributor(chanend ori, chanend but) {
   uint32_t start = 0;
   uint32_t stop = 0;
   // world
-  bit world[BITNSLOTSM(IMHT + 2, IMWD + 2)];
-  memset(world, 0, BITNSLOTSM(IMHT + 2, IMWD + 2));
+  bit world[BITNSLOTSM(WDHT + 2, WDWD + 2)];
+  memset(world, 0, BITNSLOTSM(WDHT + 2, WDWD + 2));
   uint32_t alive = 0;
-  bit buffer[BITNSLOTSM(2, IMWD)];
+  bit buffer[BITNSLOTSM(2, WDWD)];
 
   printf("%s -> %s\n%dx%d -> %dx%d\nPress SW1 to load...\n", FILENAME_IN, FILENAME_OUT, IMHT, IMWD, WDHT, WDWD);
   // wait for SW1
@@ -104,17 +104,17 @@ void distributor(chanend ori, chanend but) {
     // do work
     alive = 0;
     // copy wrap
-    set_w(world, -1,      -1, isalive_w(world,IMHT - 1, IMWD - 1));
-    set_w(world, -1,    IMWD, isalive_w(world,IMHT - 1,        0));
-    set_w(world, IMHT,    -1, isalive_w(world,0,        IMWD - 1));
-    set_w(world, IMHT,  IMWD, isalive_w(world,0,               0));
-    for (int i = 0; i < IMWD; i++) {
-      set_w(world, -1,   i, isalive_w(world, IMHT - 1, i));
-      set_w(world, IMHT, i, isalive_w(world, 0,        i));
+    set_w(world, -1,      -1, isalive_w(world,WDHT - 1, WDWD - 1));
+    set_w(world, -1,    WDWD, isalive_w(world,WDHT - 1,        0));
+    set_w(world, WDHT,    -1, isalive_w(world,0,        WDWD - 1));
+    set_w(world, WDHT,  WDWD, isalive_w(world,0,               0));
+    for (int i = 0; i < WDWD; i++) {
+      set_w(world, -1,   i, isalive_w(world, WDHT - 1, i));
+      set_w(world, WDHT, i, isalive_w(world, 0,        i));
     }
-    for (int i = 0; i < IMWD; i++) {
-      set_w(world, i,   -1, isalive_w(world, i, IMWD - 1));
-      set_w(world, i, IMWD, isalive_w(world, i,        0));
+    for (int i = 0; i < WDWD; i++) {
+      set_w(world, i,   -1, isalive_w(world, i, WDWD - 1));
+      set_w(world, i, WDWD, isalive_w(world, i,        0));
     }
     // first row
     for (int c = 0; c < WDWD; c++) {
@@ -145,7 +145,7 @@ void distributor(chanend ori, chanend but) {
     }
     // put top and last result from buffer
     for (int c = 0; c < WDWD; c++) {
-      set_w(world, WDHT - 1, c, BITTESTM(buffer, (IMHT - 1) % 2, c, IMWD));
+      set_w(world, WDHT - 1, c, BITTESTM(buffer, (WDHT - 1) % 2, c, WDWD));
     }
     // printworld_w(world);
   }
