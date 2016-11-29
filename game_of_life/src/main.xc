@@ -153,13 +153,13 @@ unsafe void print_world(char (*unsafe array)[IMWD / 8][IMHT], unsigned char (*un
   }
 }
 
-unsigned char gol(unsigned char surr){ 
-  unsigned char count = 0; 
-  while (surr != 0){ 
-    surr = surr & (surr - 1); 
-    count += 1; 
-  } 
-  return count; 
+unsigned char gol(unsigned char surr){
+  unsigned char count = 0;
+  while (surr != 0){
+    surr = surr & (surr - 1);
+    count += 1;
+  }
+  return count;
 }
 
 //returns whether a given cell will be alive. Takes absolute XY coordianates
@@ -189,36 +189,36 @@ unsafe unsigned char update(char (*unsafe array)[IMWD / 8][IMHT], uint16_t cellw
     cellAbove = IMHT - 1;
   }
 
-  
-  if (cellwp == 0){ 
+
+  if (cellwp == 0){
     //we're on the right hand border of a char
-    data =      ((((*array)[cellw][cellAbove]       &   (3)                   )   << 1)        )              | //row above 
-                ((((*array)[cellw][cellBelow]       &   (3)                   )   << 4)        )              | //row below 
+    data =      ((((*array)[cellw][cellAbove]       &   (3)                   )   << 1)        )              | //row above
+                ((((*array)[cellw][cellBelow]       &   (3)                   )   << 4)        )              | //row below
                 ((((*array)[cellw][cellh]           &   (2)                   )   << 6)        )              | //to the left
                 ((((*array)[cellright][cellAbove]   &   (128)                 )       )    >> 7)              | //above and right
                 ((((*array)[cellright][cellBelow]   &   (128)                 )   << 3)    >> 7)              | //below and right
                 ((((*array)[cellright][cellh]       &   (128)                 )   << 6)    >> 7)              ; //mid and right
-  } 
-  else if (cellwp == 7){ 
+  }
+  else if (cellwp == 7){
     //or we're on the left hand side
-    data =      ((((*array)[cellw][cellAbove]       &   (192                 ))       )    >> 6)              | //row above 
-                ((((*array)[cellw][cellBelow]       &   (192                 ))   << 3)    >> 6)              | //row below 
-                ((((*array)[cellw][cellh]           &   (64                  ))   << 6)    >> 6)              | //to the right 
-                ((((*array)[cellLeft][cellAbove]    &   (1)                  ))   << 2)                       | //above and left 
+    data =      ((((*array)[cellw][cellAbove]       &   (192                 ))       )    >> 6)              | //row above
+                ((((*array)[cellw][cellBelow]       &   (192                 ))   << 3)    >> 6)              | //row below
+                ((((*array)[cellw][cellh]           &   (64                  ))   << 6)    >> 6)              | //to the right
+                ((((*array)[cellLeft][cellAbove]    &   (1)                  ))   << 2)                       | //above and left
                 ((((*array)[cellLeft][cellBelow]    &   (1)                  ))   << 5)                       | //below and left
                 ((((*array)[cellLeft][cellh]        &   (1)                  ))   << 7)                       ; //mid and left
-  } 
+  }
   else{
     //bit wizardry
-    //or we're in the middle 
-    data =      ((((*array)[cellw][cellAbove]       &   (7 << (cellwpminus)  ))       )    >> cellwpminus)    | //row above 
-                ((((*array)[cellw][cellBelow]       &   (7 << (cellwpminus)  ))   << 3)    >> cellwpminus)    | //row below 
-                ((((*array)[cellw][cellh]           &   (2 << (cellwp)       ))   << 6)    >> cellwp)         |  //to the left 
-                ((((*array)[cellw][cellh]           &   (1 << (cellwpminus)  ))   << 6)    >> cellwpminus)    ; //to the right 
+    //or we're in the middle
+    data =      ((((*array)[cellw][cellAbove]       &   (7 << (cellwpminus)  ))       )    >> cellwpminus)    | //row above
+                ((((*array)[cellw][cellBelow]       &   (7 << (cellwpminus)  ))   << 3)    >> cellwpminus)    | //row below
+                ((((*array)[cellw][cellh]           &   (2 << (cellwp)       ))   << 6)    >> cellwp)         |  //to the left
+                ((((*array)[cellw][cellh]           &   (1 << (cellwpminus)  ))   << 6)    >> cellwpminus)    ; //to the right
   }
 
   alive = hamming[data];
-  
+
   return alive == 3 || (alive == 2 && self);
 }
 
@@ -266,12 +266,12 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
           if (J == startRow){
             for(int R = 0; R < (IMWD / 8); R++){
               firstRow[R] = 0;
-            }        
+            }
           }
           else{
             for(int R = 0; R < (IMWD / 8); R++){
               wset[R][wset_mid] = 0;
-            }        
+            }
           }
         }
         //else do it properly
@@ -321,7 +321,7 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
         if (J > startRow){
           wset_mid = (wset_mid + 1) % 2;
         }
-        
+
         // write back the working set to the array, except the first and last rows
         if (J > startRow + 1){
           for(uint16_t L = 0; L < IMWD / 8; L++){
@@ -387,7 +387,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend ori, chanend c_timi
   uint32_t start;
   uint32_t stop;
 
-  char val;
+  uint8_t val;
   uint8_t D1 = 1; // green flash state
 
   for (int I = 0; I < IMHT; I++){
@@ -400,7 +400,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend ori, chanend c_timi
   char *unsafe fpause_p = &fpause;
   char (*unsafe ffinshed_p)[WCOUNT] = &ffinshed;
   char *unsafe fstop_p = &fstop;
-  uint16_t (*unsafe startRows_p)[WCOUNT] = &startRows; 
+  uint16_t (*unsafe startRows_p)[WCOUNT] = &startRows;
   unsigned char (*unsafe rowCounts_p)[IMHT] = &rowCounts;
 
   for(int I = 0; I < WCOUNT; I++){
@@ -445,13 +445,14 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend ori, chanend c_timi
 
       //do iterations. This handles all but the last one
       //when ITERATIONS == 1 this doesn't get run
-      for(int I = 1; I < ITERATIONS; I++){
+      for(int I = 1; /*I < ITERATIONS*/; I++){
         select {
           case ori :> val:
             t :> stop;
             p_leds <: D1_r;
             printf("Iteration: %llu\t", I);
             printf("Elapsed Time (ns): %lu0\t", stop - start);
+            printf("\n");
             // printf("Alive Cells: %d\n", alive);
             ori :> val;
             break;
@@ -464,7 +465,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend ori, chanend c_timi
                 unsigned char output = 255 * (((*array_p)[x/8][y] & (1 << (7 - x%8))) >> (7 - x%8));
                 c_out <: (output);
               }
-    
+
             }
             break;
           default:
@@ -631,24 +632,22 @@ void DataOutStream(chanend c_in) {
 // Initialise and  read orientation, send first tilt event to channel
 //
 /////////////////////////////////////////////////////////////////////////////////////////
+// Initialise and  read orientation, send first tilt event to channel
 void orientation(client interface i2c_master_if i2c, chanend toDist) {
   i2c_regop_res_t result;
   char status_data = 0;
-  int tilted = 0;
-
+  uint8_t tilted = 0;
   // Configure FXOS8700EQ
   result =
       i2c.write_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_XYZ_DATA_CFG_REG, 0x01);
   if (result != I2C_REGOP_SUCCESS) {
     printf("I2C write reg failed\n");
   }
-
   // Enable FXOS8700EQ
   result = i2c.write_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_CTRL_REG_1, 0x01);
   if (result != I2C_REGOP_SUCCESS) {
     printf("I2C write reg failed\n");
   }
-
   // Probe the orientation x-axis forever
   while (1) {
     // check until new orientation data is available
@@ -656,15 +655,18 @@ void orientation(client interface i2c_master_if i2c, chanend toDist) {
       status_data =
           i2c.read_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_DR_STATUS, result);
     } while (!status_data & 0x08);
-
     // get new x-axis tilt value
     int x = read_acceleration(i2c, FXOS8700EQ_OUT_X_MSB);
-
     // send signal to distributor after first tilt
-    if (!tilted) {
+    if (tilted) {
+      if (x < 10) {
+        toDist <: tilted;
+        tilted = 0;
+      }
+    } else {
       if (x > 30) {
-        tilted = 1 - tilted;
-        toDist <: 1;
+        toDist <: tilted;
+        tilted = 1;
       }
     }
   }
