@@ -118,8 +118,17 @@ void distributor(chanend ori, chanend but) {
       set_w(world, i,   -1, isalive_w(world, i, IMWD - 1));
       set_w(world, i, IMWD, isalive_w(world, i,        0));
     }
+    // first row
+    for (int c = 0; c < WDWD; c++) {
+      if (step_w(world, 0, c)) {
+        BITSETM(buffer, 0, c, WDWD);
+        alive++;
+      } else {
+        BITCLEARM(buffer, 0, c, WDWD);
+      }
+    }
     // rest of the rows
-    for (int r = 0; r < WDHT; r++) {
+    for (int r = 1; r < WDHT; r++) {
       // update row into buffer[r%2]
       for (int c = 0; c < WDWD; c++) {
         if (step_w(world, r, c)) {
