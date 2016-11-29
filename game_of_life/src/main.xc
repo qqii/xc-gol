@@ -19,9 +19,7 @@ on tile[0]: out  port p_leds    = XS1_PORT_4F; //port to access xCore-200 LEDs
 
 // main concurrent thread
 void distributor(chanend ori, chanend but) {
-  uint8_t val;
   uint8_t D1 = 1; // green flash state
-  uint8_t line[IMWD]; // read in storage
   // timer that overflows after (2^32-1)*10ns
   timer t;
   uint32_t start = 0;
@@ -34,15 +32,15 @@ void distributor(chanend ori, chanend but) {
 
   printf("%s -> %s\n%dx%d -> %dx%d\nPress SW1 to load...\n", FILENAME_IN, FILENAME_OUT, IMHT, IMWD, WDHT, WDWD);
   // wait for SW1
-  but :> val;
+  but :> uint8_t _;
   p_leds <: D2;
   // READ
-  val = _openinpgm(FILENAME_IN, IMWD, IMHT);
-  if (val) {
+  if (_openinpgm(FILENAME_IN, IMWD, IMHT)) {
     printf("Error openening %s for reading.\n.", FILENAME_IN);
     printf("Defaulting to a blank (or hardcoded) world...\n.");
   } else {
     // Read image line-by-line and send byte by byte to channel ch
+    uint8_t line[IMWD]; // read in storage
     for (int r = OFHT; r < IMHT; r++) {
       _readinline(line, IMWD);
       for (int c = OFWD; c < IMWD; c++) {
@@ -60,23 +58,23 @@ void distributor(chanend ori, chanend but) {
   t :> start;
   for (uintmax_t i = 0; i < ITERATIONS; i++) {
     select {
-      case ori :> val:
+      case ori :> uint8_t _:
         t :> stop;
         p_leds <: D1_r;
         printf("Iteration: %llu\t", i);
         printf("Elapsed Time (ns): %lu0\t", stop - start);
         printf("Alive Cells: %d\n", alive);
-        ori :> val;
+        ori :> uint8_t _;
         break;
-      case but :> val:
+      case but :> uint8_t _:
         p_leds <: D1_b;
         printworld_w(world);
         // SAVE
-        val = _openoutpgm(FILENAME_OUT, WDWD, WDHT);
-        if (val) {
+        if (_openinpgm(FILENAME_IN, IMWD, IMHT)) {
           printf("Error opening %s for saving.\n.", FILENAME_OUT);
           printf("Skipping save...\n.");
         } else {
+          uint8_t line[IMWD]; // read in storage
           for (int y = 0; y < IMHT; y++) {
             for (int x = 0; x < IMWD; x++) {
               if (isalive_w(world, y, x)) {
@@ -199,7 +197,7 @@ void button(in port b, chanend toDist) {
   uint8_t val;
   // detect sw1 one time
   while (1) {
-    b when pinseq(15)  :> val;
+    b when pinseq(15)  :> void;
     b when pinsneq(15) :> val;
     if (val == SW1) {
       toDist <: val;
@@ -208,7 +206,7 @@ void button(in port b, chanend toDist) {
   }
   // detect subsiquent sw2
   while (1) {
-    b when pinseq(15)  :> val;    // check that no button is pressed
+    b when pinseq(15)  :> void;   // check that no button is pressed
     b when pinsneq(15) :> val;    // check if some buttons are pressed
     if (val == SW2) {
       toDist <: val;
