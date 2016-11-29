@@ -140,7 +140,7 @@ unsafe void print_world(char (*unsafe array)[IMWD / 8][IMHT], unsigned char (*un
                                  (*array)[c][r] & 0b00000001 ? alive : dead);
     }
     if ((*workers)[nextWorker] == r){
-      printf(" %u - Worker %u\n", (*counts)[r], nextWorker);
+      printf(" %u \t- Worker %u\n", (*counts)[r], nextWorker);
       nextWorker++;
     }
     else{
@@ -235,7 +235,6 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
   int iteration = 0;
 
   uint16_t countQueue[2];
-  uint16_t firstCount;
   unsigned char countQueueMid = 0;
 
   uint16_t amount = 0;
@@ -299,34 +298,30 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
           }
         }
         if (amount > 0){
-          if (J == startRow){
-            firstCount = 2;
-          }
-          //write to the working set
-          else{
-            countQueue[wset_mid] = 2;
-          }
+          countQueue[countQueueMid] = 101;
         }
         else{
-          if (J == startRow){
-            firstCount = 0;
-          }
-          //write to the working set
-          else{
-            countQueue[wset_mid] = 0;
-          }
+          countQueue[countQueueMid] = 15;
         }
         //update which row in the working set is current
         //Don't need to do it the first time because we haven't used it
+        countQueueMid = (countQueueMid + 1) % 2;
         if (J > startRow){
           wset_mid = (wset_mid + 1) % 2;
+          if (countQueue[countQueueMid] == 101){
+            (*rowCounts)[J - 2] = (*rowCounts)[J - 2] | 100;
+            (*rowCounts)[J - 1] = 101;
+            (*rowCounts)[J] = (*rowCounts)[J] | 100;
+          }
+          else{
+            (*rowCounts)[J - 1] = 15;
+          }
         }
         
         // write back the working set to the array, except the first and last rows
         if (J > startRow + 1){
           for(uint16_t L = 0; L < IMWD / 8; L++){
             (*strips)[L][J - 1] = wset[L][wset_mid];
-            (*rowCounts)[J - 1] = countQueue[wset_mid];
           }
         }
       }
@@ -335,14 +330,8 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
 
       //wait until the previous worker has finished
       //SCREW PMOD
-      if (wnumber == 0){
-          while(!(*ffinshed)[WCOUNT - 1]){
-          }
-        }
-        else{
-          while(!(*ffinshed)[wnumber - 1]){
-          }
-        }
+      while(!(*ffinshed)[((wnumber - 1) % WCOUNT + WCOUNT) % WCOUNT] || (!(*ffinshed)[(wnumber + 1) % WCOUNT])){
+      }
 
       //write the first and last rows
       //last could be written back earlier but whatever
@@ -352,8 +341,14 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
         (*strips)[I][endRow - 1] = wset[I][wset_mid];
         (*strips)[I][startRow] = firstRow[I];
       }
-      (*rowCounts)[endRow - 1] = countQueue[wset_mid];
-      (*rowCounts)[startRow] = firstCount;
+      (*rowCounts)[endRow - 1] = countQueue[countQueueMid];
+      printf("Worker %d writing %d to row %d\n", wnumber, countQueue[countQueueMid], endRow - 1);
+      if ((*rowCounts)[endRow % IMHT] == 101){
+        (*rowCounts)[endRow - 1] = 100;
+      }
+      if ((*rowCounts)[((startRow - 1) % IMHT + IMHT) % IMHT] == 101){
+        (*rowCounts)[startRow] = 100;
+      }
     }
     else{
       (*ffinshed)[wnumber] = 1;
@@ -421,7 +416,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend ori, chanend c_timi
     worker(array_p, 6, fstart_p, fpause_p, ffinshed_p, fstop_p, startRows_p, rowCounts_p);
     {
       printf("Waiting for button press\n");
-      but :> val;
+      // but :> val;
       p_leds <: D2;
       printf( "Loading...\n" );
       for( int y = 0; y < IMHT; y++ ) {   //go through all lines
@@ -446,6 +441,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend ori, chanend c_timi
       //do iterations. This handles all but the last one
       //when ITERATIONS == 1 this doesn't get run
       for(int I = 1; I < ITERATIONS; I++){
+        //do the buttons, lights and tilt
         select {
           case ori :> val:
             t :> stop;
@@ -464,7 +460,6 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend ori, chanend c_timi
                 unsigned char output = 255 * (((*array_p)[x/8][y] & (1 << (7 - x%8))) >> (7 - x%8));
                 c_out <: (output);
               }
-    
             }
             break;
           default:
@@ -490,26 +485,13 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend ori, chanend c_timi
         }
         //handbrake on
         fpause = 1;
+        print_world(array_p, rowCounts_p, startRows_p);
 
         //update the rows count to include nearby rows
         uint16_t totalRows = 0;
 
         // update the row counts to mark adjacent rows
         //do the top row
-
-        for (int R = 0; R < IMHT; R++){
-          if (rowCounts[R] > 1){
-            rowCounts[(R + 1) % IMHT] += 1;
-            rowCounts[((R - 1) % IMHT + IMHT) % IMHT] += 1;
-          }
-        }
-
-        for (int R = 0; R < IMHT; R++){
-          if (rowCounts[R] > 0){
-            totalRows++;
-            rowCounts[R] = 1;
-          }
-        }
 
         //start of load balancing calculations
         uint16_t currentCount = 0;
