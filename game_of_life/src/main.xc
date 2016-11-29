@@ -46,7 +46,7 @@ char hamming[256] = {
 on tile[0]: port p_scl = XS1_PORT_1E;         //interface ports to orientation
 on tile[0]: port p_sda = XS1_PORT_1F;
 on tile[0]: in   port p_buttons = XS1_PORT_4E; //port to access xCore-200 buttons
-on tile[1]: out  port p_leds    = XS1_PORT_4F; //port to access xCore-200 LEDs
+on tile[0]: out  port p_leds    = XS1_PORT_4F; //port to access xCore-200 LEDs
 
 #define FXOS8700EQ_I2C_ADDR 0x1E  //register addresses for orientation
 #define FXOS8700EQ_XYZ_DATA_CFG_REG 0x0E
@@ -98,6 +98,14 @@ void DataInStream(chanend c_out)
 // Start your implementation by changing this function to implement the game of life
 // by farming out parts of the image to worker threads who implement it...
 // Currently the function just inverts the image
+
+void led(out port p, chanend toDist) {
+  int val;
+  while (1) {
+    toDist :> val;
+    p <: val;
+  }
+}
 
 void button(in port b, chanend toDist) {
   uint8_t val;
@@ -372,7 +380,7 @@ unsafe void worker(char (*unsafe strips)[IMWD / 8][IMHT], char wnumber, char *un
 }
 
 
-unsafe void distributor(chanend c_in, chanend c_out, chanend ori, chanend c_timing, chanend but)
+unsafe void distributor(chanend c_in, chanend c_out, chanend ori, chanend c_timing, chanend but, chanend c_led)
 {
   //data structure and flags
   char array[IMWD / 8][IMHT];
@@ -422,7 +430,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend ori, chanend c_timi
     {
       printf("Waiting for button press\n");
       but :> val;
-      p_leds <: D2;
+      c_led <: D2;
       printf( "Loading...\n" );
       for( int y = 0; y < IMHT; y++ ) {   //go through all lines
         for( int x = 0; x < IMWD / 8; x++ ) { //go through each pixel per line
@@ -449,7 +457,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend ori, chanend c_timi
         select {
           case ori :> val:
             t :> stop;
-            p_leds <: D1_r;
+            c_led <: D1_r;
             printf("Iteration: %llu\t", I);
             printf("Elapsed Time (ns): %lu0\t", stop - start);
             printf("\n");
@@ -457,7 +465,7 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend ori, chanend c_timi
             ori :> val;
             break;
           case but :> val:
-            p_leds <: D1_b;
+            c_led <: D1_b;
             print_world(array_p, rowCounts_p, startRows_p);
             // SAVE
             for( int y = 0; y < IMHT; y++ ) {   //go through all lines
@@ -471,11 +479,11 @@ unsafe void distributor(chanend c_in, chanend c_out, chanend ori, chanend c_timi
           default:
             switch (D1) {
               case 0:
-                p_leds <: D0;
+                c_led <: D0;
                 D1 = 1;
                 break;
               case 1:
-                p_leds <: D1_g;
+                c_led <: D1_g;
                 D1 = 0;
                 break;
             }
@@ -681,17 +689,18 @@ unsafe int main(void) {
 
   i2c_master_if i2c[1];               //interface to orientation
 
-  chan c_inIO, c_outIO, c_control, c_timing;    //extend your channel definitions here
+  chan c_inIO, c_outIO, c_control, c_timing, c_led;    //extend your channel definitions here
   chan c_but;            // io channel
 
   par {
-    on tile[1]: distributor(c_inIO, c_outIO, c_control, c_timing, c_but);//thread to coordinate work on image
+    on tile[1]: distributor(c_inIO, c_outIO, c_control, c_timing, c_but, c_led);//thread to coordinate work on image
     on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10);   //server thread providing orientation data
     on tile[0]: orientation(i2c[0],c_control);        //client thread reading orientation data
     on tile[0]: DataInStream(c_inIO);          //thread to read in a PGM image
     on tile[0]: DataOutStream(c_outIO);       //thread to write out a PGM image
     on tile[0]: timing(c_timing);
     on tile[0]: button(p_buttons, c_but);
+    on tile[0]: led(p_leds, c_led);
   }
 
   return 0;
