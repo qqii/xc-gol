@@ -13,4 +13,13 @@
 // number of iterations to run
 #define ITERATIONS 16384
 
+// constants for LEDs
+#define D0   0b0000
+#define D2   0b0001
+#define D1_b 0b0010
+#define D1_g 0b0100
+#define D1_r 0b1000
+// constants for buttons
+#define SW1 14
+#define SW2 13
 #endif
