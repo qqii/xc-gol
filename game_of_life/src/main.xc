@@ -120,7 +120,8 @@ void distributor(chanend ori, chanend but) {
     }
     // first row
     for (int c = 0; c < WDWD; c++) {
-      if (step_w(world, 0, c)) {
+      bit ns = mooreneighbours_w(world, 0, c);
+      if (ns == 3 || (ns == 2 && isalive_w(world, 0, c))) {
         BITSETM(buffer, 0, c, WDWD);
         alive++;
       } else {
@@ -131,7 +132,8 @@ void distributor(chanend ori, chanend but) {
     for (int r = 1; r < WDHT; r++) {
       // update row into buffer[r%2]
       for (int c = 0; c < WDWD; c++) {
-        if (step_w(world, r, c)) {
+        bit ns = mooreneighbours_w(world, r, c);
+        if (ns == 3 || (ns == 2 && isalive_w(world, r, c))) {
           BITSETM(buffer, r % 2, c, WDWD);
           alive++;
         } else {
