@@ -28,7 +28,7 @@ void distributor(chanend ori, chanend but) {
   // world
   world_t world = blank_w();
   uint32_t alive = 0;
-  bit buffer[BITNSLOTSM(3, IMWD)];
+  bit buffer[BITNSLOTSM(2, IMWD)];
 
   printf("%s -> %s\n%dx%d -> %dx%d\nPress SW1 to load...\n", FILENAME_IN, FILENAME_OUT, IMHT, IMWD, WDHT, WDWD);
   // wait for SW1
@@ -116,18 +116,8 @@ void distributor(chanend ori, chanend but) {
       set_w(world, i,   -1, isalive_w(world, i, IMWD - 1));
       set_w(world, i, IMWD, isalive_w(world, i,        0));
     }
-    // write top result to buffer[2]
-    // calculate row 1 into buffer[1]
-    for (int c = 0; c < WDWD; c++) {
-      if (step_w(world, 0, c)) {
-        BITSETM(buffer, 2, c, WDWD);
-        alive++;
-      } else {
-        BITCLEARM(buffer, 2, c, WDWD);
-      }
-    }
     // rest of the rows
-    for (int r = 1; r < WDHT; r++) {
+    for (int r = 0; r < WDHT; r++) {
       // update row into buffer[r%2]
       for (int c = 0; c < WDWD; c++) {
         if (step_w(world, r, c)) {
@@ -139,12 +129,11 @@ void distributor(chanend ori, chanend but) {
       }
       // writeback from buffer[(r-1)%2]
       for (int c = 0; c < WDWD; c++) {
-        set_w(world, r - 1, c, BITTESTM(buffer, (r - 1) % 2, c, WDWD));
+        set_w(world, r - 1, c, BITTESTM(buffer, (r + 1) % 2, c, WDWD));
       }
     }
     // put top and last result from buffer
     for (int c = 0; c < WDWD; c++) {
-      set_w(world, 0, c, BITTESTM(buffer, 2, c, IMWD));
       set_w(world, WDHT - 1, c, BITTESTM(buffer, (IMHT - 1) % 2, c, IMWD));
     }
     // printworld_w(world);
