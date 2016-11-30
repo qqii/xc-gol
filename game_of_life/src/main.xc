@@ -28,14 +28,16 @@ void distributor(chanend ori, chanend but) {
   timer t;
   uint32_t start;
   uint32_t stop;
+  // state
+  uintmax_t i; // iteration
 
+  t :> start;
 
   memset(world, 0, BITSLOTSP(WDHT + 4, WDWD + 4));
   memset(hamming, 0, 16);
   // in theory this isn't needed
   memset(hash, 0, 65536);
 
-  t :> start;
 
   // there are many ways to speedup the calculating
   for (uint16_t i = 0; i < 16; i++) {
@@ -51,10 +53,9 @@ void distributor(chanend ori, chanend but) {
   }
 
   for (uint32_t i = 0; i < 65536; i++) {
-    uint8_t chunk[BITSLOTSP(4, 4)];
-    uint8_t result[BITSLOTSP(2, 2)];
+    bit chunk[BITSLOTSP(4, 4)];
+    bit result[BITSLOTSP(2, 2)];
 
-    memset(chunk, 0, BITSLOTSP(4, 4));
     memset(result, 0, BITSLOTSP(2, 2));
 
     BITSET4(chunk, i & 0b11111111, 0, 0, 4);
@@ -82,9 +83,7 @@ void distributor(chanend ori, chanend but) {
         neighbours += BITTESTP(chunk, r + 1 + 1, c + 1    , 4);
         neighbours += BITTESTP(chunk, r + 1 + 1, c + 1 + 1, 4);
 
-        if (neighbours == 3) {
-          BITSETP(result, r, c, 2);
-        } else if (neighbours == 2 && BITTESTP(chunk, r + 1, c + 1, 4)) {
+        if (neighbours == 3 || (neighbours == 2 && BITTESTP(chunk, r + 1, c + 1, 4))) {
           BITSETP(result, r, c, 2);
         }
       }
@@ -137,7 +136,7 @@ void distributor(chanend ori, chanend but) {
 
   // start timer
   t :> start;
-  for (uintmax_t i = 0; i < ITERATIONS; i++) {
+  for (i = 0; i < ITERATIONS; i++) {
     select {
       // tilt
       case ori :> uint8_t _:
@@ -146,6 +145,7 @@ void distributor(chanend ori, chanend but) {
         printf("Iteration: %llu\t", i);
         printf("Elapsed Time (ns): %lu0\t", stop - start);
         printf("Alive Cells: %d\n", alive);
+        printworld_w(world);
         // wait until untilt
         ori :> uint8_t _;
         break;
@@ -223,7 +223,9 @@ void distributor(chanend ori, chanend but) {
 
         result = hash[chunk];
 
-        alive += hamming[result];
+        if (2 <= r && r <= WDHT && 2 <= c && c <= WDWD) {
+          alive += hamming[result];
+        }
         BITSET2(world, result, r, c, WDWD + 4);
       }
     }
@@ -254,6 +256,7 @@ void distributor(chanend ori, chanend but) {
     // printworld_w(world);
   }
   t :> stop;
+  printf("Iteration: %llu\t", i);
   printf("Elapsed Time (ns): %lu0\t", stop - start);
   printf("Alive Cells: %d\n", alive);
   printworld_w(world);
