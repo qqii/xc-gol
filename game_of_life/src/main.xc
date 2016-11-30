@@ -121,6 +121,7 @@ void distributor(chanend ori, chanend but) {
       _readinline(line, IMWD);
       for (int c = 0; c < IMWD; c++) {
         if (line[c]) {
+          alive++;
           BITSETP(world, r + 2 + OFHT, c + 2 + OFWD, WDWD + 4);
         }
         // clear not needed since world is 0 from memset
@@ -136,7 +137,7 @@ void distributor(chanend ori, chanend but) {
 
   // start timer
   t :> start;
-  for (uintmax_t i = 0; i < ITERATIONS; i+= 2) {
+  for (uintmax_t i = 0; i < ITERATIONS; i++) {
     select {
       // tilt
       case ori :> uint8_t _:
@@ -197,9 +198,21 @@ void distributor(chanend ori, chanend but) {
     //     set_w(world, i,   -1, isalive_w(world, i, WDWD - 1));
     //     set_w(world, i, WDWD, isalive_w(world, i,        0));
     //   }
+
+    // copy wrap
+    BITSET2(world, BITGET2(world, WDHT, WDWD, WDWD + 4),        0,        0, WDWD + 4);
+    BITSET2(world, BITGET2(world, WDHT,    2, WDWD + 4),        0, WDWD + 2, WDWD + 4);
+    BITSET2(world, BITGET2(world,    2, WDWD, WDWD + 4), WDWD + 2,        0, WDWD + 4);
+    BITSET2(world, BITGET2(world,    2,    2, WDWD + 4), WDWD + 2, WDWD + 2, WDWD + 4);
+    for (int r = 2; r < WDHT + 2; r += 2) {
+      BITSET2(world, BITGET2(world, r,    2, WDWD + 4), r, WDWD + 2, WDWD + 4);
+      BITSET2(world, BITGET2(world, r, WDWD, WDWD + 4), r,        0, WDWD + 4);
+    }
+    for (int c = 2; c < WDWD + 2; c += 2) {
+      BITSET2(world, BITGET2(world,    2, c, WDWD + 4), WDHT + 2, c, WDWD + 4);
+      BITSET2(world, BITGET2(world, WDHT, c, WDWD + 4),        0, c, WDWD + 4);
+    }
     alive = 0;
-
-
     for (int r = 0; r < WDHT + 2; r += 2) {
       for (int c = 0; c < WDWD + 2; c += 2) {
         uint16_t chunk = 0;
@@ -208,41 +221,41 @@ void distributor(chanend ori, chanend but) {
         chunk |= BITGET4(world, r,     c, WDWD + 4);
         chunk |= BITGET4(world, r + 2, c, WDWD + 4) << 8;
 
-
         result = hash[chunk];
 
         alive += hamming[result];
         BITSET2(world, result, r, c, WDWD + 4);
       }
     }
-    switch (i % 2) {
-      case 0:
-      p_leds <: D2;
-      break;
-      case 1:
-      p_leds <: D0;
-      break;
-    }
-
-    for (int r = WDHT + 2; r > 0; r -= 2) {
-      for (int c = WDWD + 2; c > 0; c -= 2) {
-        uint16_t chunk = 0;
-        uint8_t result = 0;
-
-        chunk |= BITGET4(world, r - 2, c - 2, WDWD + 4);
-        chunk |= BITGET4(world, r,     c - 2, WDWD + 4) << 8;
-
-        result = hash[chunk];
-
-        alive += hamming[result];
-        BITSET2(world, result, r, c, WDWD + 4);
-      }
-    }
+    // switch (i % 2) {
+    //   case 0:
+    //   p_leds <: D2;
+    //   break;
+    //   case 1:
+    //   p_leds <: D0;
+    //   break;
+    // }
+    //
+    // for (int r = WDHT + 2; r > 0; r -= 2) {
+    //   for (int c = WDWD + 2; c > 0; c -= 2) {
+    //     uint16_t chunk = 0;
+    //     uint8_t result = 0;
+    //
+    //     chunk |= BITGET4(world, r - 2, c - 2, WDWD + 4);
+    //     chunk |= BITGET4(world, r,     c - 2, WDWD + 4) << 8;
+    //
+    //     result = hash[chunk];
+    //
+    //     alive += hamming[result];
+    //     BITSET2(world, result, r, c, WDWD + 4);
+    //   }
+    // }
 
     // printworld_w(world);
   }
   t :> stop;
   printf("Elapsed Time (ns): %lu0\t", stop - start);
+  printf("Alive Cells: %d\n", alive);
   printworld_w(world);
 }
 
