@@ -3,12 +3,12 @@
 
 #include <stdint.h>
 
-#define FILENAME_IN "512x512.pgm"
+#define FILENAME_IN "test.pgm"
 #define FILENAME_OUT "testout.pgm"
 
 // image height and width
-#define IMHT 512
-#define IMWD 512
+#define IMHT 16
+#define IMWD 16
 
 // image to world offset
 #define OFHT 0
@@ -18,7 +18,7 @@
 #define WDHT IMHT//102/ + 256 + 8 + 4
 #define WDWD IMWD//1024 + 256 + 8 + 4
 
-#define ITERATIONS 100//UINTMAX_MAX
+#define ITERATIONS 16384//UINTMAX_MAX
 
 // UNTILT_THRESHOLD < TILT_THRESHOLD to avoid it detecting multiple times
 #define TILT_THRESHOLD   30
