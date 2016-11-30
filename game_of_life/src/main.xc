@@ -19,25 +19,37 @@ on tile[0]: out  port p_leds    = XS1_PORT_4F; //port to access xCore-200 LEDs
 
 // main concurrent thread
 void distributor(chanend ori, chanend but) {
-  uint8_t world[BITSLOTSP(WDHT, WDWD)];
-  uint8_t hamming[16];
-  uint8_t hash[65536];
-
-  memset(world, 0, BITSLOTSP(WDHT, WDWD));
-  memset(hamming, 0, 16);
-  memset(hash, 0, 65536 * 2);
-
+  // world
+  bit world[BITSLOTSP(WDHT + 4, WDWD + 4)]; // world of 2x2 cells with border
+  bit hamming[16]; // hamming weight to calculate alive cells
+  bit hash[65536];  // hash for lookup
+  uint32_t alive = 0;
+  // timer
   timer t;
   uint32_t start;
-  uint32_t end;
+  uint32_t stop;
+  // state
+  uint8_t processingled = 1;  // state of processing led
+
+
+  memset(world, 0, BITSLOTSP(WDHT + 4, WDWD + 4));
+  memset(hamming, 0, 16);
+  // in theory this isn't needed
+  memset(hash, 0, 65536);
 
   t :> start;
 
-  for (uint8_t i = 0; i < 16; i++) {
-    hamming[i] += i & 0b0001;
-    hamming[i] += (i & 0b0010) >> 1;
-    hamming[i] += (i & 0b0100) >> 2;
-    hamming[i] += (i & 0b1000) >> 3;
+  // there are many ways to speedup the calculating
+  for (uint16_t i = 0; i < 16; i++) {
+    //forall i. hamming[i] = 0 due to memset
+    hamming[i] += (i & 0b00000001) >> 0;
+    hamming[i] += (i & 0b00000010) >> 1;
+    hamming[i] += (i & 0b00000100) >> 2;
+    hamming[i] += (i & 0b00001000) >> 3;
+    // hamming[i] += (i & 0b00010000) >> 4;
+    // hamming[i] += (i & 0b00100000) >> 5;
+    // hamming[i] += (i & 0b01000000) >> 6;
+    // hamming[i] += (i & 0b10000000) >> 7;
   }
 
   for (uint32_t i = 0; i < 65536; i++) {
@@ -55,6 +67,7 @@ void distributor(chanend ori, chanend but) {
     //   printf("\n");
     // }
 
+    // TODO: consider loop unrolling
     for (uint8_t r = 0; r < 2; r++) {
       for (uint8_t c = 0; c < 2; c++) {
         uint8_t neighbours = 0;
@@ -86,159 +99,146 @@ void distributor(chanend ori, chanend but) {
 
     hash[i] = BITGET2(result, 0, 0, 2);
   }
-  t :> end;
-  printf("%d0\n", end - start);
+  t :> stop;
+  printf("Calculating hamming weights and hashes took: %d0\n", stop - start);
+  printf("%s -> %s\n%dx%d -> %dx%d\n", FILENAME_IN, FILENAME_OUT, IMHT, IMWD, WDHT, WDWD);
+  printf("Press SW1 to load...\n");
 
-  BITSETP(world, 0, 0, WDWD);
-  BITSETP(world, 1, 1, WDWD);
+  // await sw1
+  but :> uint8_t _;
+  // green led for reading
+  p_leds <: D1_g;
 
-  printf("BITSLOTSP(h, w) = %d\n", BITSLOTSP(WDHT, WDWD));
-  for (int r = 0; r < WDHT; r++) {
-    for (int c = 0; c < WDWD; c++) {
-      // printf("(%02d,%02d)", (r / 2) * BITSLOTW(W), (c / 2) / 2);
-      printf("%c", BITTESTP(world, r, c, WDWD) ? 219 : 176);
+  // READ FILE
+  if (_openinpgm(FILENAME_IN, IMWD, IMHT)) {
+    printf("Error openening %s for reading.\n.", FILENAME_IN);
+    printf("Defaulting to a blank (or hardcoded) world...\n.");
+  } else {
+    // Read image line-by-line and send byte by byte to channel ch
+    uint8_t line[IMWD]; // read in storage
+    for (int r = OFHT; r < IMHT; r++) {
+      _readinline(line, IMWD);
+      for (int c = OFWD; c < IMWD; c++) {
+        if (line[c]) {
+          BITSETP(world, r + 2, c + 2, WDWD + 4);
+        }
+        // clear not needed since world is 0 from memset
+        // else {
+        //   BITCLEARP(world, r, c, IMWD);
+        // }
+      }
     }
-    printf("\n");
   }
+  _closeinpgm();
 
-  //
-  // uint8_t D1 = 1; // green flash state
-  // // timer that overflows after (2^32-1)*10ns
-  // timer t;
-  // uint32_t start = 0;
-  // uint32_t stop = 0;
-  // // world
-  // bit world[BITNSLOTSM(WDHT + 2, WDWD + 2)];
-  // memset(world, 0, BITNSLOTSM(WDHT + 2, WDWD + 2));
-  // uint32_t alive = 0;
-  // bit buffer[BITNSLOTSM(2, WDWD)];
-  //
-  // printf("%s -> %s\n%dx%d -> %dx%d\nPress SW1 to load...\n", FILENAME_IN, FILENAME_OUT, IMHT, IMWD, WDHT, WDWD);
-  // // wait for SW1
-  // but :> uint8_t _;
-  // p_leds <: D2;
-  // // READ
-  // if (_openinpgm(FILENAME_IN, IMWD, IMHT)) {
-  //   printf("Error openening %s for reading.\n.", FILENAME_IN);
-  //   printf("Defaulting to a blank (or hardcoded) world...\n.");
-  // } else {
-  //   // Read image line-by-line and send byte by byte to channel ch
-  //   uint8_t line[IMWD]; // read in storage
-  //   for (int r = OFHT; r < IMHT; r++) {
-  //     _readinline(line, IMWD);
-  //     for (int c = OFWD; c < IMWD; c++) {
-  //       set_w(world, r, c, line[c]);
-  //     }
+  world[1] |= 1 << 5;
+  // BITSETP(world, 0 + 2, 2 + 2, WDWD + 4);
+  // BITSETP(world, 2 + 2, 2 + 2, WDWD + 4);
+  // for (int r = 2; r < WDHT + 2; r += 2) {
+  //   for (int c = 2; c < WDWD + 2; c += 2) {
+  //     printf("%d, %d:\n", r, c);
+  //     BITSET2(world, 0b1111, r, c, WDWD + 4);
+  //     printworld_w(world);
   //   }
   // }
-  // _closeinpgm();
-  //
-  // // world = random_w(world, 0, 0, WDHT, WDWD, 0);
-  // // world = randperlin_w(world, 0, 0, WDHT, WDWD, 0, 0, 0.1, 4, 0);
-  // printworld_w(world);
-  // // printworldcode_w(world, 1);
-  //
-  // t :> start;
-  // for (uintmax_t i = 0; i < ITERATIONS; i++) {
-  //   select {
-  //     case ori :> uint8_t _:
-  //       t :> stop;
-  //       p_leds <: D1_r;
-  //       printf("Iteration: %llu\t", i);
-  //       printf("Elapsed Time (ns): %lu0\t", stop - start);
-  //       printf("Alive Cells: %d\n", alive);
-  //       ori :> uint8_t _;
-  //       break;
-  //     case but :> uint8_t _:
-  //       p_leds <: D1_b;
-  //       printworld_w(world);
-  //       // SAVE
-  //       if (_openinpgm(FILENAME_IN, IMWD, IMHT)) {
-  //         printf("Error opening %s for saving.\n.", FILENAME_OUT);
-  //         printf("Skipping save...\n.");
-  //       } else {
-  //         uint8_t line[IMWD]; // read in storage
-  //         for (int y = 0; y < IMHT; y++) {
-  //           for (int x = 0; x < IMWD; x++) {
-  //             if (isalive_w(world, y, x)) {
-  //               line[x] = ~0;
-  //             } else {
-  //               line[x] = 0;
-  //             }
-  //           }
-  //           _writeoutline(line, IMWD);
-  //         }
-  //       }
-  //       _closeoutpgm();
-  //       break;
-  //     default:
-  //       switch (D1) {
-  //         case 0:
-  //           p_leds <: D0;
-  //           D1 = 1;
-  //           break;
-  //         case 1:
-  //           p_leds <: D1_g;
-  //           D1 = 0;
-  //           break;
-  //       }
-  //       break;
-  //   }
-  //   // do work
-  //   alive = 0;
-  //   // copy wrap
-  //   set_w(world, -1,      -1, isalive_w(world,WDHT - 1, WDWD - 1));
-  //   set_w(world, -1,    WDWD, isalive_w(world,WDHT - 1,        0));
-  //   set_w(world, WDHT,    -1, isalive_w(world,0,        WDWD - 1));
-  //   set_w(world, WDHT,  WDWD, isalive_w(world,0,               0));
-  //   for (int i = 0; i < WDWD; i++) {
-  //     set_w(world, -1,   i, isalive_w(world, WDHT - 1, i));
-  //     set_w(world, WDHT, i, isalive_w(world, 0,        i));
-  //   }
-  //   for (int i = 0; i < WDWD; i++) {
-  //     set_w(world, i,   -1, isalive_w(world, i, WDWD - 1));
-  //     set_w(world, i, WDWD, isalive_w(world, i,        0));
-  //   }
-  //   // first row
-  //   for (int c = 0; c < WDWD; c++) {
-  //     bit ns = mooreneighbours_w(world, 0, c);
-  //     if (ns == 3 || (ns == 2 && isalive_w(world, 0, c))) {
-  //       BITSETM(buffer, 0, c, WDWD);
-  //       alive++;
-  //     } else {
-  //       BITCLEARM(buffer, 0, c, WDWD);
-  //     }
-  //   }
-  //   // rest of the rows
-  //   for (int r = 1; r < WDHT; r++) {
-  //     // update row into buffer[r%2]
-  //     for (int c = 0; c < WDWD; c++) {
-  //       bit ns = mooreneighbours_w(world, r, c);
-  //       if (ns == 3 || (ns == 2 && isalive_w(world, r, c))) {
-  //         BITSETM(buffer, r % 2, c, WDWD);
-  //         alive++;
-  //       } else {
-  //         BITCLEARM(buffer, r % 2, c, WDWD);
-  //       }
-  //     }
-  //     // writeback from buffer[(r-1)%2]
-  //     for (int c = 0; c < WDWD; c++) {
-  //       set_w(world, r - 1, c, BITTESTM(buffer, (r + 1) % 2, c, WDWD));
-  //     }
-  //   }
-  //   // put top and last result from buffer
-  //   for (int c = 0; c < WDWD; c++) {
-  //     set_w(world, WDHT - 1, c, BITTESTM(buffer, (WDHT - 1) % 2, c, WDWD));
-  //   }
-  //   // printworld_w(world);
-  // }
-  // t :> stop;
-  // printf("Elapsed Time (ns): %lu0\t", stop - start);
-  // printworld_w(world);
+
+  printworld_w(world);
+  return;
+
+  // start timer
+  t :> start;
+  for (uintmax_t i = 0; i < ITERATIONS; i++) {
+    select {
+      // tilt
+      case ori :> uint8_t _:
+        t :> stop;
+        p_leds <: D1_r;
+        printf("Iteration: %llu\t", i);
+        printf("Elapsed Time (ns): %lu0\t", stop - start);
+        printf("Alive Cells: %d\n", alive);
+        // wait until untilt
+        ori :> uint8_t _;
+        break;
+      // button sw2
+      case but :> uint8_t _:
+        p_leds <: D1_b;
+        printworld_w(world);
+        // SAVE
+        if (_openinpgm(FILENAME_IN, WDWD, WDHT)) {
+          printf("Error opening %s for saving.\n.", FILENAME_OUT);
+          printf("Skipping save...\n.");
+        } else {
+          uint8_t line[WDWD]; // read in storage
+          for (int r = 0; r < WDHT; r++) {
+            for (int c = 0; c < WDWD; c++) {
+              if (BITTESTP(world, r, c, WDWD + 4)) {
+                line[c] = ~0;
+              } else {
+                line[c] = 0;
+              }
+            }
+            _writeoutline(line, WDWD);
+          }
+        }
+        _closeoutpgm();
+        break;
+      default:
+        switch (processingled) {
+          case 0:
+          p_leds <: D0;
+          processingled = 1;
+          break;
+          case 1:
+          p_leds <: D2;
+          processingled = 0;
+          break;
+        }
+        break;
+    }
+
+    // do work
+    // copy wrap
+    //   set_w(world, -1,      -1, isalive_w(world,WDHT - 1, WDWD - 1));
+    //   set_w(world, -1,    WDWD, isalive_w(world,WDHT - 1,        0));
+    //   set_w(world, WDHT,    -1, isalive_w(world,0,        WDWD - 1));
+    //   set_w(world, WDHT,  WDWD, isalive_w(world,0,               0));
+    //   for (int i = 0; i < WDWD; i++) {
+    //     set_w(world, -1,   i, isalive_w(world, WDHT - 1, i));
+    //     set_w(world, WDHT, i, isalive_w(world, 0,        i));
+    //   }
+    //   for (int i = 0; i < WDWD; i++) {
+    //     set_w(world, i,   -1, isalive_w(world, i, WDWD - 1));
+    //     set_w(world, i, WDWD, isalive_w(world, i,        0));
+    //   }
+    alive = 0;
+    for (int r = 2; r < WDHT + 2; r += 2) {
+      for (int c = 2; c < WDWD + 2; c += 2) {
+        uint16_t chunk = 0;
+        uint8_t result;
+
+        if (i % 2 == 0) {
+          chunk |= BITGET4(world, r,     c, WDWD + 4);
+          chunk |= BITGET4(world, r + 2, c, WDWD + 4) << 8;
+        } else {
+          chunk |= BITGET4(world, r - 2, c - 2, WDWD + 4);
+          chunk |= BITGET4(world, r,     c - 2, WDWD + 4) << 8;
+        }
+        result = hash[chunk];
+
+        alive += hamming[result];
+        BITSET2(world, result, r, c, WDWD + 4);
+      }
+    }
+
+    printworld_w(world);
+  }
+  t :> stop;
+  printf("Elapsed Time (ns): %lu0\t", stop - start);
+  printworld_w(world);
 }
 
-// Initialise and  read orientation, send first tilt event to channel
-void orientation(client interface i2c_master_if i2c, chanend toDist) {
+// orientation thread sends any tilt or untilt
+void orientation(client interface i2c_master_if i2c, chanend c_ori) {
   i2c_regop_res_t result;
   char status_data = 0;
   uint8_t tilted = 0;
@@ -265,26 +265,27 @@ void orientation(client interface i2c_master_if i2c, chanend toDist) {
     // send signal to distributor after first tilt
     if (tilted) {
       if (x < UNTILT_THRESHOLD) {
-        toDist <: tilted;
+        c_ori <: tilted;
         tilted = 0;
       }
     } else {
       if (x > TILT_THRESHOLD) {
-        toDist <: tilted;
+        c_ori <: tilted;
         tilted = 1;
       }
     }
   }
 }
 
-void button(in port b, chanend toDist) {
+// button thread sends the first sw1 and any subsiquent sw2 presses
+void button(in port b, chanend c_but) {
   uint8_t val;
   // detect sw1 one time
   while (1) {
     b when pinseq(15)  :> void;
     b when pinsneq(15) :> val;
     if (val == SW1) {
-      toDist <: val;
+      c_but <: val;
       break;
     }
   }
@@ -293,7 +294,7 @@ void button(in port b, chanend toDist) {
     b when pinseq(15)  :> void;   // check that no button is pressed
     b when pinsneq(15) :> val;    // check if some buttons are pressed
     if (val == SW2) {
-      toDist <: val;
+      c_but <: val;
     }
   }
 }
@@ -304,9 +305,9 @@ unsafe int main(unsigned int argc, char* unsafe argv[argc]) {
   chan c_ori, c_but;    // orientation and button channel
 
   par {
-    // on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10); // server thread providing orientation data
-    // on tile[0]: orientation(i2c[0], c_ori);
-    // on tile[0]: button(p_buttons, c_but);
+    on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10); // server thread providing orientation data
+    on tile[0]: orientation(i2c[0], c_ori);
+    on tile[0]: button(p_buttons, c_but);
     on tile[0]: distributor(c_ori, c_but); // thread to coordinate work on image
   }
 
