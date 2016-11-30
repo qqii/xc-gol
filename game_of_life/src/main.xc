@@ -141,19 +141,19 @@ unsafe void distributor(chanend ori, chanend but) {
 
   // start timer
 
-  chan toWorker[WNUMBER];
+  chan toWorker[WCOUNT];
 
   par{
     worker(world_p, 0, toWorker[0]);
     worker(world_p, 1, toWorker[1]);
-    worker(world_p, 2, toWorker[2]);
-    worker(world_p, 3, toWorker[3]);
-    worker(world_p, 4, toWorker[4]);
-    worker(world_p, 5, toWorker[5]);
-    worker(world_p, 6, toWorker[6]);
+    // worker(world_p, 2, toWorker[2]);
+    // worker(world_p, 3, toWorker[3]);
+    // worker(world_p, 4, toWorker[4]);
+    // worker(world_p, 5, toWorker[5]);
+    // worker(world_p, 6, toWorker[6]);
     {
       t :> start;
-      for (int I = 0; I < WNUMBER; I++){
+      for (int I = 0; I < WCOUNT; I++){
         toWorker[I] <: 1;
       }
       for (i = 0; i < ITERATIONS; i++) {
@@ -237,7 +237,7 @@ unsafe void distributor(chanend ori, chanend but) {
         //   }
         // }
 
-        // printworld_w(world);
+        printworld_w(world);
       }
       t :> stop;
       printf("Iteration: %llu\t", i);
