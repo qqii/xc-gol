@@ -36,6 +36,10 @@ void printworldcode_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], bit onlyalive);
 // uint8_t mooreneighbours_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c);
 #define mooreneighbours_w(world, r, c) (isalive_w((world), (r) - 1, (c) - 1) + isalive_w((world), (r) - 1, (c)) + isalive_w((world), (r) - 1, (c) + 1) + isalive_w((world), (r), (c) - 1) + isalive_w((world), (r), (c) + 1) + isalive_w((world), (r) + 1, (c) - 1) + isalive_w((world), (r) + 1, (c)) + isalive_w((world), (r) + 1, (c) + 1))
 
+// calculate the all bit field shift
+uint16_t allbitfield_w(bit world[BITNSLOTSM(WDHT + 2, WDWD + 2)], uint16_t r, uint16_t c);
+// #define allbitfield_w(world, r, c) ((isalive_w(world, r - 1, c - 1) << 0) | (isalive_w(world, r - 1, c) << 1) | (isalive_w(world, r - 1, c + 1) << 2) | (isalive_w(world, r, c - 1) << 3) | (isalive_w(world, r, c) << 4) | (isalive_w(world, r, c + 1) << 5) | (isalive_w(world, r + 1, c - 1) << 6) | (isalive_w(world, r + 1, c) << 7) | (isalive_w(world, r + 1, c + 1) << 8))
+
 // returns the next iteratation of a cell in the active hash according to the
 // rules of game of life
 // if you wanted to change the rules, here would be the place to change it

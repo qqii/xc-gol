@@ -90,6 +90,20 @@ void printworldcode_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], bit onlyalive) {
 //   return i;
 // }
 
+uint16_t allbitfield_w(bit world[BITNSLOTSM(WDHT + 2, WDWD + 2)], uint16_t r, uint16_t c) {
+    uint16_t i = 0;
+    i |= isalive_w(world, r - 1, c - 1) << 0;
+    i |= isalive_w(world, r - 1, c    ) << 1;
+    i |= isalive_w(world, r - 1, c + 1) << 2;
+    i |= isalive_w(world, r,     c - 1) << 3;
+    i |= isalive_w(world, r,     c    ) << 4;
+    i |= isalive_w(world, r,     c + 1) << 5;
+    i |= isalive_w(world, r + 1, c - 1) << 6;
+    i |= isalive_w(world, r + 1, c    ) << 7;
+    i |= isalive_w(world, r + 1, c + 1) << 8;
+    return i;
+}
+
 // rules for game of life
 // bit step_w(bit hash[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
 //   bit neighbours = mooreneighbours_w(hash, r, c);
