@@ -11,8 +11,8 @@
 #define IMWD 16
 
 // image to world offset
-#define OFHT 0
-#define OFWD 0
+#define OFHT -5
+#define OFWD -3
 
 // world height
 #define WDHT 16//1024 + 256 + 8 + 4

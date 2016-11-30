@@ -56,6 +56,9 @@ void distributor(chanend ori, chanend but) {
     uint8_t chunk[BITSLOTSP(4, 4)];
     uint8_t result[BITSLOTSP(2, 2)];
 
+    memset(chunk, 0, BITSLOTSP(4, 4));
+    memset(result, 0, BITSLOTSP(2, 2));
+
     BITSET4(chunk, i & 0b11111111, 0, 0, 4);
     BITSET4(chunk, i >> 8, 2, 0, 4);
 
@@ -71,20 +74,20 @@ void distributor(chanend ori, chanend but) {
     for (uint8_t r = 0; r < 2; r++) {
       for (uint8_t c = 0; c < 2; c++) {
         uint8_t neighbours = 0;
-
         neighbours += BITTESTP(chunk, r + 1 - 1, c + 1 - 1, 4);
         neighbours += BITTESTP(chunk, r + 1 - 1, c + 1    , 4);
         neighbours += BITTESTP(chunk, r + 1 - 1, c + 1 + 1, 4);
         neighbours += BITTESTP(chunk, r + 1,     c + 1 - 1, 4);
+        // neighbours += BITTESTP(chunk, r + 1,     c + 1,     4);
         neighbours += BITTESTP(chunk, r + 1,     c + 1 + 1, 4);
         neighbours += BITTESTP(chunk, r + 1 + 1, c + 1 - 1, 4);
         neighbours += BITTESTP(chunk, r + 1 + 1, c + 1    , 4);
         neighbours += BITTESTP(chunk, r + 1 + 1, c + 1 - 1, 4);
 
-        if (neighbours == 3 || (neighbours == 2 && BITTESTP(chunk, r + 1, c + 1, 4))) {
+        if (neighbours == 3) {
           BITSETP(result, r, c, 2);
-        } else {
-          BITCLEARP(result, r, c, 2);
+        } else if (neighbours == 2 && BITTESTP(chunk, r + 1, c + 1, 4)) {
+          BITSETP(result, r, c, 2);
         }
       }
     }
@@ -116,11 +119,11 @@ void distributor(chanend ori, chanend but) {
   } else {
     // Read image line-by-line and send byte by byte to channel ch
     uint8_t line[IMWD]; // read in storage
-    for (int r = OFHT; r < IMHT; r++) {
+    for (int r = 0; r < IMHT; r++) {
       _readinline(line, IMWD);
-      for (int c = OFWD; c < IMWD; c++) {
+      for (int c = 0; c < IMWD; c++) {
         if (line[c]) {
-          BITSETP(world, r + 2, c + 2, WDWD + 4);
+          BITSETP(world, r + 2 + OFHT, c + 2 + OFWD, WDWD + 4);
         }
         // clear not needed since world is 0 from memset
         // else {
@@ -202,7 +205,7 @@ void distributor(chanend ori, chanend but) {
     for (int r = 2; r < WDHT + 2; r += 2) {
       for (int c = 2; c < WDWD + 2; c += 2) {
         uint16_t chunk = 0;
-        uint8_t result;
+        uint8_t result = 0;
 
         if (i % 2 == 0) {
           chunk |= BITGET4(world, r,     c, WDWD + 4);
@@ -211,7 +214,30 @@ void distributor(chanend ori, chanend but) {
           chunk |= BITGET4(world, r - 2, c - 2, WDWD + 4);
           chunk |= BITGET4(world, r,     c - 2, WDWD + 4) << 8;
         }
+
+        uint8_t ch[BITSLOTSP(4, 4)];
+        uint8_t re[BITSLOTSP(2, 2)];
+        BITSET4(ch, chunk & 0b11111111, 0, 0, 4);
+        BITSET4(ch, chunk >> 8, 2, 0, 4);
+        BITSET2(re, result, 0, 0, 2);
+
         result = hash[chunk];
+
+        // printf("chunk %d:\n", i);
+        // for (int r = 0; r < 4; r++) {
+        //   for (int c = 0; c < 4; c++) {
+        //     printf("%c", BITTESTP(ch, r, c, 4) ? 219 : 176);
+        //   }
+        //   printf("\n");
+        // }
+        //
+        // printf("result %d:\n", i);
+        // for (int r = 0; r < 2; r++) {
+        //   for (int c = 0; c < 2; c++) {
+        //     printf("%c", BITTESTP(re, r, c, 2) ? 219 : 176);
+        //   }
+        //   printf("\n", 176);
+        // }
 
         alive += hamming[result];
         BITSET2(world, result, r, c, WDWD + 4);
