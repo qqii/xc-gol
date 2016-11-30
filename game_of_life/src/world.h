@@ -29,8 +29,10 @@ void printworld_w(bit world[BITSLOTSP(WDHT + 4, WDWD + 4)]) {
     for (uint16_t c = 0; c < WDWD + 4; c++) {
       if (r < 2 || c < 2 || r >= WDHT + 2 || c >= WDWD + 2) {
         printf("%c", BITTESTP(world, r, c, WDWD + 4) ? balive : bdead);
+        // printf("%c", BITTESTP(world, r, c, WDWD + 4) ? balive : bdead);
       } else {
         printf("%c", BITTESTP(world, r, c, WDWD + 4) ? alive : dead);
+        // printf("%c", BITTESTP(world, r, c, WDWD + 4) ? alive : dead);
       }
     }
     printf("\n");

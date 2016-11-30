@@ -28,8 +28,6 @@ void distributor(chanend ori, chanend but) {
   timer t;
   uint32_t start;
   uint32_t stop;
-  // state
-  uint8_t processingled = 1;  // state of processing led
 
 
   memset(world, 0, BITSLOTSP(WDHT + 4, WDWD + 4));
@@ -82,7 +80,7 @@ void distributor(chanend ori, chanend but) {
         neighbours += BITTESTP(chunk, r + 1,     c + 1 + 1, 4);
         neighbours += BITTESTP(chunk, r + 1 + 1, c + 1 - 1, 4);
         neighbours += BITTESTP(chunk, r + 1 + 1, c + 1    , 4);
-        neighbours += BITTESTP(chunk, r + 1 + 1, c + 1 - 1, 4);
+        neighbours += BITTESTP(chunk, r + 1 + 1, c + 1 + 1, 4);
 
         if (neighbours == 3) {
           BITSETP(result, r, c, 2);
@@ -138,7 +136,7 @@ void distributor(chanend ori, chanend but) {
 
   // start timer
   t :> start;
-  for (uintmax_t i = 0; i < ITERATIONS; i++) {
+  for (uintmax_t i = 0; i < ITERATIONS; i+= 2) {
     select {
       // tilt
       case ori :> uint8_t _:
@@ -174,14 +172,12 @@ void distributor(chanend ori, chanend but) {
         _closeoutpgm();
         break;
       default:
-        switch (processingled) {
+        switch (i % 2) {
           case 0:
           p_leds <: D0;
-          processingled = 1;
           break;
           case 1:
           p_leds <: D2;
-          processingled = 0;
           break;
         }
         break;
@@ -202,49 +198,48 @@ void distributor(chanend ori, chanend but) {
     //     set_w(world, i, WDWD, isalive_w(world, i,        0));
     //   }
     alive = 0;
-    for (int r = 2; r < WDHT + 2; r += 2) {
-      for (int c = 2; c < WDWD + 2; c += 2) {
+
+
+    for (int r = 0; r < WDHT + 2; r += 2) {
+      for (int c = 0; c < WDWD + 2; c += 2) {
         uint16_t chunk = 0;
         uint8_t result = 0;
 
-        if (i % 2 == 0) {
-          chunk |= BITGET4(world, r,     c, WDWD + 4);
-          chunk |= BITGET4(world, r + 2, c, WDWD + 4) << 8;
-        } else {
-          chunk |= BITGET4(world, r - 2, c - 2, WDWD + 4);
-          chunk |= BITGET4(world, r,     c - 2, WDWD + 4) << 8;
-        }
+        chunk |= BITGET4(world, r,     c, WDWD + 4);
+        chunk |= BITGET4(world, r + 2, c, WDWD + 4) << 8;
 
-        uint8_t ch[BITSLOTSP(4, 4)];
-        uint8_t re[BITSLOTSP(2, 2)];
-        BITSET4(ch, chunk & 0b11111111, 0, 0, 4);
-        BITSET4(ch, chunk >> 8, 2, 0, 4);
-        BITSET2(re, result, 0, 0, 2);
 
         result = hash[chunk];
 
-        // printf("chunk %d:\n", i);
-        // for (int r = 0; r < 4; r++) {
-        //   for (int c = 0; c < 4; c++) {
-        //     printf("%c", BITTESTP(ch, r, c, 4) ? 219 : 176);
-        //   }
-        //   printf("\n");
-        // }
-        //
-        // printf("result %d:\n", i);
-        // for (int r = 0; r < 2; r++) {
-        //   for (int c = 0; c < 2; c++) {
-        //     printf("%c", BITTESTP(re, r, c, 2) ? 219 : 176);
-        //   }
-        //   printf("\n", 176);
-        // }
+        alive += hamming[result];
+        BITSET2(world, result, r, c, WDWD + 4);
+      }
+    }
+    switch (i % 2) {
+      case 0:
+      p_leds <: D2;
+      break;
+      case 1:
+      p_leds <: D0;
+      break;
+    }
+
+    for (int r = WDHT + 2; r > 0; r -= 2) {
+      for (int c = WDWD + 2; c > 0; c -= 2) {
+        uint16_t chunk = 0;
+        uint8_t result = 0;
+
+        chunk |= BITGET4(world, r - 2, c - 2, WDWD + 4);
+        chunk |= BITGET4(world, r,     c - 2, WDWD + 4) << 8;
+
+        result = hash[chunk];
 
         alive += hamming[result];
         BITSET2(world, result, r, c, WDWD + 4);
       }
     }
 
-    printworld_w(world);
+    // printworld_w(world);
   }
   t :> stop;
   printf("Elapsed Time (ns): %lu0\t", stop - start);
