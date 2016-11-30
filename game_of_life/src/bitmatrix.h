@@ -13,7 +13,7 @@ typedef uint8_t bit;
 
 #define BITSLOTSP(h, w) (BITSLOTH(h) * BITSLOTW(w))
 #define BITSLOTP(r, c, w) ((((r) / 2) * BITSLOTW(w)) + ((c) / 4))
-#define BITSHIFTP(r, c, w) ((((c % 4) / w) * 4) + ((r % 2) * 2) + (c % 2))
+#define BITSHIFTP(r, c, w) (((((c) % 4) / 2) * 4) + (((r) % 2) * 2) + ((c) % 2))
 // c must be a multiple of 2
 #define BITSET2(a, s, r, c, w) if ((c) % BIT_W) { (a)[BITSLOTP(r, c, w)] = (s) << BIT_W | ((a)[BITSLOTP(r, c, w)] & 0b1111); } else { (a)[BITSLOTP(r, c, w)] = (s) | ((a)[BITSLOTP(r, c, w)] & 0b11110000); }
 // c must be a multiple of 4

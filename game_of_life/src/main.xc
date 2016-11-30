@@ -131,19 +131,7 @@ void distributor(chanend ori, chanend but) {
   }
   _closeinpgm();
 
-  world[1] |= 1 << 5;
-  // BITSETP(world, 0 + 2, 2 + 2, WDWD + 4);
-  // BITSETP(world, 2 + 2, 2 + 2, WDWD + 4);
-  // for (int r = 2; r < WDHT + 2; r += 2) {
-  //   for (int c = 2; c < WDWD + 2; c += 2) {
-  //     printf("%d, %d:\n", r, c);
-  //     BITSET2(world, 0b1111, r, c, WDWD + 4);
-  //     printworld_w(world);
-  //   }
-  // }
-
   printworld_w(world);
-  return;
 
   // start timer
   t :> start;
