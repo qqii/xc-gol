@@ -18,6 +18,8 @@
 #define WDHT IMHT//102/ + 256 + 8 + 4
 #define WDWD IMWD//1024 + 256 + 8 + 4
 
+#define WNUMBER 7
+
 #define ITERATIONS 16384//UINTMAX_MAX
 
 // UNTILT_THRESHOLD < TILT_THRESHOLD to avoid it detecting multiple times

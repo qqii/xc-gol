@@ -9,6 +9,10 @@
 #include "pgmIO.h"
 #include "constants.h"
 #include "world.h"
+#include "worker.h"
+
+bit hamming[16]; // hamming weight to calculate alive cells
+bit hash[65536];  // hash for lookup
 
 // interface ports to orientation
 on tile[0]: port p_scl = XS1_PORT_1E;
@@ -18,12 +22,13 @@ on tile[0]: in   port p_buttons = XS1_PORT_4E; //port to access xCore-200 button
 on tile[0]: out  port p_leds    = XS1_PORT_4F; //port to access xCore-200 LEDs
 
 // main concurrent thread
-void distributor(chanend ori, chanend but) {
+unsafe void distributor(chanend ori, chanend but) {
   // world
   bit world[BITSLOTSP(WDHT + 4, WDWD + 4)]; // world of 2x2 cells with border
-  bit hamming[16]; // hamming weight to calculate alive cells
-  bit hash[65536];  // hash for lookup
   uint32_t alive = 0;
+
+  bit (*unsafe world_p)[BITSLOTSP(WDHT + 4, WDWD + 4)] = &world;
+
   // timer
   timer t;
   uint32_t start;
@@ -105,9 +110,9 @@ void distributor(chanend ori, chanend but) {
   printf("Press SW1 to load...\n");
 
   // await sw1
-  but :> uint8_t _;
+  // but :> uint8_t _;
   // green led for reading
-  p_leds <: D1_g;
+  // p_leds <: D1_g;
 
   // READ FILE
   if (_openinpgm(FILENAME_IN, IMWD, IMHT)) {
@@ -135,109 +140,112 @@ void distributor(chanend ori, chanend but) {
   printworld_w(world);
 
   // start timer
-  t :> start;
-  for (i = 0; i < ITERATIONS; i++) {
-    select {
-      // tilt
-      case ori :> uint8_t _:
-        t :> stop;
-        p_leds <: D1_r;
-        printf("Iteration: %llu\t", i);
-        printf("Elapsed Time (ns): %lu0\t", stop - start);
-        printf("Alive Cells: %d\n", alive);
-        printworld_w(world);
-        // wait until untilt
-        ori :> uint8_t _;
-        break;
-      // button sw2
-      case but :> uint8_t _:
-        p_leds <: D1_b;
-        printworld_w(world);
-        // SAVE
-        if (_openinpgm(FILENAME_IN, WDWD, WDHT)) {
-          printf("Error opening %s for saving.\n.", FILENAME_OUT);
-          printf("Skipping save...\n.");
-        } else {
-          uint8_t line[WDWD]; // read in storage
-          for (int r = 0; r < WDHT; r++) {
-            for (int c = 0; c < WDWD; c++) {
-              if (BITTESTP(world, r, c, WDWD + 4)) {
-                line[c] = ~0;
-              } else {
-                line[c] = 0;
-              }
-            }
-            _writeoutline(line, WDWD);
-          }
-        }
-        _closeoutpgm();
-        break;
-      default:
-        switch (i % 2) {
-          case 0:
-          p_leds <: D0;
-          break;
-          case 1:
-          p_leds <: D2;
-          break;
-        }
-        break;
-    }
 
-    // do work
-    // copy wrap
-    //   set_w(world, -1,      -1, isalive_w(world,WDHT - 1, WDWD - 1));
-    //   set_w(world, -1,    WDWD, isalive_w(world,WDHT - 1,        0));
-    //   set_w(world, WDHT,    -1, isalive_w(world,0,        WDWD - 1));
-    //   set_w(world, WDHT,  WDWD, isalive_w(world,0,               0));
-    //   for (int i = 0; i < WDWD; i++) {
-    //     set_w(world, -1,   i, isalive_w(world, WDHT - 1, i));
-    //     set_w(world, WDHT, i, isalive_w(world, 0,        i));
-    //   }
-    //   for (int i = 0; i < WDWD; i++) {
-    //     set_w(world, i,   -1, isalive_w(world, i, WDWD - 1));
-    //     set_w(world, i, WDWD, isalive_w(world, i,        0));
-    //   }
+  chan toWorker[WNUMBER];
 
-    // copy wrap
-    BITSET2(world, BITGET2(world, WDHT, WDWD, WDWD + 4),        0,        0, WDWD + 4);
-    BITSET2(world, BITGET2(world, WDHT,    2, WDWD + 4),        0, WDWD + 2, WDWD + 4);
-    BITSET2(world, BITGET2(world,    2, WDWD, WDWD + 4), WDWD + 2,        0, WDWD + 4);
-    BITSET2(world, BITGET2(world,    2,    2, WDWD + 4), WDWD + 2, WDWD + 2, WDWD + 4);
-    for (int r = 2; r < WDHT + 2; r += 2) {
-      BITSET2(world, BITGET2(world, r,    2, WDWD + 4), r, WDWD + 2, WDWD + 4);
-      BITSET2(world, BITGET2(world, r, WDWD, WDWD + 4), r,        0, WDWD + 4);
-    }
-    for (int c = 2; c < WDWD + 2; c += 2) {
-      BITSET2(world, BITGET2(world,    2, c, WDWD + 4), WDHT + 2, c, WDWD + 4);
-      BITSET2(world, BITGET2(world, WDHT, c, WDWD + 4),        0, c, WDWD + 4);
-    }
-    // step world
-    alive = 0;
-    for (int r = 0; r < WDHT + 2; r += 2) {
-      for (int c = 0; c < WDWD + 2; c += 2) {
-        uint16_t chunk = 0;
-        uint8_t result = 0;
-
-        chunk |= BITGET4(world, r,     c, WDWD + 4);
-        chunk |= BITGET4(world, r + 2, c, WDWD + 4) << 8;
-
-        result = hash[chunk];
-
-        if (2 <= r && r <= WDHT && 2 <= c && c <= WDWD) {
-          alive += hamming[result];
-        }
-        BITSET2(world, result, r, c, WDWD + 4);
+  par{
+    worker(world_p, 0, toWorker[0]);
+    worker(world_p, 1, toWorker[1]);
+    worker(world_p, 2, toWorker[2]);
+    worker(world_p, 3, toWorker[3]);
+    worker(world_p, 4, toWorker[4]);
+    worker(world_p, 5, toWorker[5]);
+    worker(world_p, 6, toWorker[6]);
+    {
+      t :> start;
+      for (int I = 0; I < WNUMBER; I++){
+        toWorker[I] <: 1;
       }
-    }
+      for (i = 0; i < ITERATIONS; i++) {
+        // select {
+        //   // tilt
+        //   case ori :> uint8_t _:
+        //     t :> stop;
+        //     p_leds <: D1_r;
+        //     printf("Iteration: %llu\t", i);
+        //     printf("Elapsed Time (ns): %lu0\t", stop - start);
+        //     printf("Alive Cells: %d\n", alive);
+        //     printworld_w(world);
+        //     // wait until untilt
+        //     ori :> uint8_t _;
+        //     break;
+        //   // button sw2
+        //   case but :> uint8_t _:
+        //     p_leds <: D1_b;
+        //     printworld_w(world);
+        //     // SAVE
+        //     if (_openinpgm(FILENAME_IN, WDWD, WDHT)) {
+        //       printf("Error opening %s for saving.\n.", FILENAME_OUT);
+        //       printf("Skipping save...\n.");
+        //     } else {
+        //       uint8_t line[WDWD]; // read in storage
+        //       for (int r = 0; r < WDHT; r++) {
+        //         for (int c = 0; c < WDWD; c++) {
+        //           if (BITTESTP(world, r, c, WDWD + 4)) {
+        //             line[c] = ~0;
+        //           } else {
+        //             line[c] = 0;
+        //           }
+        //         }
+        //         _writeoutline(line, WDWD);
+        //       }
+        //     }
+        //     _closeoutpgm();
+        //     break;
+        //   default:
+        //     switch (i % 2) {
+        //       case 0:
+        //       p_leds <: D0;
+        //       break;
+        //       case 1:
+        //       p_leds <: D2;
+        //       break;
+        //     }
+        //     break;
+        // }
 
-    // printworld_w(world);
+
+        // copy wrap
+        BITSET2(world, BITGET2(world, WDHT, WDWD, WDWD + 4),        0,        0, WDWD + 4);
+        BITSET2(world, BITGET2(world, WDHT,    2, WDWD + 4),        0, WDWD + 2, WDWD + 4);
+        BITSET2(world, BITGET2(world,    2, WDWD, WDWD + 4), WDWD + 2,        0, WDWD + 4);
+        BITSET2(world, BITGET2(world,    2,    2, WDWD + 4), WDWD + 2, WDWD + 2, WDWD + 4);
+        for (int r = 2; r < WDHT + 2; r += 2) {
+          BITSET2(world, BITGET2(world, r,    2, WDWD + 4), r, WDWD + 2, WDWD + 4);
+          BITSET2(world, BITGET2(world, r, WDWD, WDWD + 4), r,        0, WDWD + 4);
+        }
+        for (int c = 2; c < WDWD + 2; c += 2) {
+          BITSET2(world, BITGET2(world,    2, c, WDWD + 4), WDHT + 2, c, WDWD + 4);
+          BITSET2(world, BITGET2(world, WDHT, c, WDWD + 4),        0, c, WDWD + 4);
+        }
+        // step world
+        // alive = 0;
+        // for (int r = 0; r < WDHT + 2; r += 2) {
+        //   for (int c = 0; c < WDWD + 2; c += 2) {
+        //     uint16_t chunk = 0;
+        //     uint8_t result = 0;
+
+        //     chunk |= BITGET4(world, r,     c, WDWD + 4);
+        //     chunk |= BITGET4(world, r + 2, c, WDWD + 4) << 8;
+
+        //     result = hash[chunk];
+
+        //     if (2 <= r && r <= WDHT && 2 <= c && c <= WDWD) {
+        //       alive += hamming[result];
+        //     }
+        //     BITSET2(world, result, r, c, WDWD + 4);
+        //   }
+        // }
+
+        // printworld_w(world);
+      }
+      t :> stop;
+      printf("Iteration: %llu\t", i);
+      printf("Elapsed Time (ns): %lu0\t", stop - start);
+      printf("Alive Cells: %d\n", alive);
+      // printworld_w(world);
+    }
   }
-  t :> stop;
-  printf("Iteration: %llu\t", i);
-  printf("Elapsed Time (ns): %lu0\t", stop - start);
-  printf("Alive Cells: %d\n", alive);
-  // printworld_w(world);
 }
 
 // orientation thread sends any tilt or untilt
@@ -311,7 +319,7 @@ unsafe int main(unsigned int argc, char* unsafe argv[argc]) {
     on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10); // server thread providing orientation data
     on tile[0]: orientation(i2c[0], c_ori);
     on tile[0]: button(p_buttons, c_but);
-    on tile[0]: distributor(c_ori, c_but); // thread to coordinate work on image
+    on tile[1]: distributor(c_ori, c_but); // thread to coordinate work on image
   }
 
   // currently the program will never stop, the io thread does not support graceful shutdown
