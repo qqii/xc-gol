@@ -42,9 +42,6 @@ unsafe void lastWorker(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int w
 
   uint16_t startRow =(((WDHT + 2) / WCOUNT) * wnumber) & ~1; // FIXME
   uint16_t endRow = (((WDHT + 2) / WCOUNT) * (wnumber + 1)) & ~1 ;
-  if (wnumber == WCOUNT - 1) {
-    endRow = WDHT;
-  }
   // printf("Worker %d starting at %d and ending at %d\n", wnumber, startRow, endRow);
 
   int finished = 0;
