@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define FILENAME_IN "test.pgm"
+#define FILENAME_IN "test.pgm"//"ch.pgm"
 #define FILENAME_OUT "testout.pgm"
 
 // image height and width, has to match FILENAME_IN
@@ -16,8 +16,8 @@
 #define WDWD IMWD//1024 + 256 + 8 + 4
 
 // image to world offset
-#define OFHT -5
-#define OFWD -3
+#define OFHT 0
+#define OFWD 0
 
 // number of workers
 #define WCOUNT 7

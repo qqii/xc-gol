@@ -158,14 +158,16 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
             c_led <: D1_b;
             printworld_w(world, i);
             // save to file
-            if (_openinpgm(FILENAME_IN, WDWD, WDHT)) {
+            if (_openoutpgm(FILENAME_IN, WDWD, WDHT)) {
               printf("Error opening %s for saving.\n.", FILENAME_OUT);
               printf("Skipping save...\n.");
             } else {
               uint8_t line[WDWD]; // write out in storage
               for (int r = 0; r < WDHT; r++) {
                 for (int c = 0; c < WDWD; c++) {
-                  if (BITTESTP(world, r, c, WDWD + 4)) {
+                  int sr = pmod((r - i), WDHT + 4);
+                  int sc = pmod((c - i), WDWD + 4);
+                  if (BITTESTP(world, sr, sc, WDWD + 4)) {
                     line[c] = ~0;
                   } else {
                     line[c] = 0;
