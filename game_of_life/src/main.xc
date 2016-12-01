@@ -21,8 +21,16 @@ on tile[0]: port p_sda = XS1_PORT_1F;
 on tile[0]: in   port p_buttons = XS1_PORT_4E; //port to access xCore-200 buttons
 on tile[0]: out  port p_leds    = XS1_PORT_4F; //port to access xCore-200 LEDs
 
+void led(out port p, chanend toDist) {
+  int val;
+  while (1) {
+    toDist :> val;
+    p <: val;
+  }
+}
+
 // main concurrent thread
-unsafe void distributor(chanend ori, chanend but) {
+unsafe void distributor(chanend ori, chanend but, chanend c_led) {
   // world
   bit world[BITSLOTSP(WDHT + 4, WDWD + 4)]; // world of 2x2 cells with border
   uint32_t alive = 0;
@@ -112,7 +120,7 @@ unsafe void distributor(chanend ori, chanend but) {
   // await sw1
   // but :> uint8_t _;
   // green led for reading
-  // p_leds <: D1_g;
+  c_led <: D1_g;
 
   // READ FILE
   if (_openinpgm(FILENAME_IN, IMWD, IMHT)) {
@@ -151,60 +159,61 @@ unsafe void distributor(chanend ori, chanend but) {
     worker(world_p, 2, toWorker[2], toNextWorker[3], toNextWorker[2]);
     worker(world_p, 3, toWorker[3], toNextWorker[4], toNextWorker[3]);
     worker(world_p, 4, toWorker[4], toNextWorker[5], toNextWorker[4]);
-    worker(world_p, 5, toWorker[5], toNextWorker[6], toNextWorker[5]);
-    worker(world_p, 6, toWorker[6], fromLastWorker,  toNextWorker[6]);
+    worker(world_p, 5, toWorker[5], fromLastWorker, toNextWorker[5]);
+    // worker(world_p, 5, toWorker[5], toNextWorker[6], toNextWorker[5]);
+    // worker(world_p, 6, toWorker[6], fromLastWorker,  toNextWorker[6]);
     {
       t :> start;
       for (int I = 0; I < WCOUNT; I++){
         toWorker[I] <: 1;
       }
       for (i = 0; i < ITERATIONS; i++) {
-        // select {
-        //   // tilt
-        //   case ori :> uint8_t _:
-        //     t :> stop;
-        //     p_leds <: D1_r;
-        //     printf("Iteration: %llu\t", i);
-        //     printf("Elapsed Time (ns): %lu0\t", stop - start);
-        //     printf("Alive Cells: %d\n", alive);
-        //     printworld_w(world);
-        //     // wait until untilt
-        //     ori :> uint8_t _;
-        //     break;
-        //   // button sw2
-        //   case but :> uint8_t _:
-        //     p_leds <: D1_b;
-        //     printworld_w(world);
-        //     // SAVE
-        //     if (_openinpgm(FILENAME_IN, WDWD, WDHT)) {
-        //       printf("Error opening %s for saving.\n.", FILENAME_OUT);
-        //       printf("Skipping save...\n.");
-        //     } else {
-        //       uint8_t line[WDWD]; // read in storage
-        //       for (int r = 0; r < WDHT; r++) {
-        //         for (int c = 0; c < WDWD; c++) {
-        //           if (BITTESTP(world, r, c, WDWD + 4)) {
-        //             line[c] = ~0;
-        //           } else {
-        //             line[c] = 0;
-        //           }
-        //         }
-        //         _writeoutline(line, WDWD);
-        //       }
-        //     }
-        //     _closeoutpgm();
-        //     break;
-        //   default:
-        //     switch (i % 2) {
-        //       case 0:
-        //       p_leds <: D0;
-        //       break;
-        //       case 1:
-        //       p_leds <: D2;
-        //       break;
-        //     }
-        //     break;
-        // }
+        select {
+          // tilt
+          case ori :> uint8_t _:
+            t :> stop;
+            c_led <: D1_r;
+            printf("Iteration: %llu\t", i);
+            printf("Elapsed Time (ns): %lu0\t", stop - start);
+            printf("Alive Cells: %d\n", alive);
+            printworld_w(world);
+            // wait until untilt
+            ori :> uint8_t _;
+            break;
+          // button sw2
+          case but :> uint8_t _:
+            c_led <: D1_b;
+            printworld_w(world);
+            // SAVE
+            if (_openinpgm(FILENAME_IN, WDWD, WDHT)) {
+              printf("Error opening %s for saving.\n.", FILENAME_OUT);
+              printf("Skipping save...\n.");
+            } else {
+              uint8_t line[WDWD]; // read in storage
+              for (int r = 0; r < WDHT; r++) {
+                for (int c = 0; c < WDWD; c++) {
+                  if (BITTESTP(world, r, c, WDWD + 4)) {
+                    line[c] = ~0;
+                  } else {
+                    line[c] = 0;
+                  }
+                }
+                _writeoutline(line, WDWD);
+              }
+            }
+            _closeoutpgm();
+            break;
+          default:
+            switch (i % 2) {
+              case 0:
+              c_led <: D0;
+              break;
+              case 1:
+              c_led <: D2;
+              break;
+            }
+            break;
+        }
 
 
         // copy wrap
@@ -310,13 +319,14 @@ void button(in port b, chanend c_but) {
 // Orchestrate concurrent system and start up all threads
 unsafe int main(unsigned int argc, char* unsafe argv[argc]) {
   i2c_master_if i2c[1]; // interface to orientation
-  chan c_ori, c_but;    // orientation and button channel
+  chan c_ori, c_but, c_led;    // orientation and button channel
 
   par {
     on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10); // server thread providing orientation data
     on tile[0]: orientation(i2c[0], c_ori);
     on tile[0]: button(p_buttons, c_but);
-    on tile[1]: distributor(c_ori, c_but); // thread to coordinate work on image
+    on tile[0]: led(p_leds, c_led);
+    on tile[1]: distributor(c_ori, c_but, c_led); // thread to coordinate work on image
   }
 
   // currently the program will never stop, the io thread does not support graceful shutdown

@@ -8,8 +8,6 @@
 extern bit hamming[16]; // hamming weight to calculate alive cells
 extern bit hash[65536];  // hash for lookup
 
-#define BUFFERWIDTH 2
-
 unsafe void worker(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int wnumber, chanend toDist, chanend toNextWorker, chanend fromLastWorker){
 
   uint16_t startRow =(((WDHT + 2) / WCOUNT) * wnumber) & ~1; // FIXME
