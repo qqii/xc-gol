@@ -1,33 +1,38 @@
 #include "world.h"
 
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
-
-unsafe void blank_w(world_t* unsafe world) {
-  memset(world->hash, 0, BITNSLOTSM(IMHT + 2, IMWD + 2));
-}
 
 void print_ix(int16_t r, int16_t c) {
   printf("{%d, %d}", r, c);
 }
 
-unsafe void printworld_w(world_t* unsafe world) {
-  char alive = 219;
-  char dead = 177; // to 178 for other block characters
+
+unsafe void printworld_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)]) {
+  // characters for pretty printing the world
+  char dead   =  32; // space
+  char alive  = 219; // full block
+  char bdead  = 176; // low density dotted
+  char balive = 178; // high density dotted
+
   print_ix(WDHT, WDWD); // print_ix doesn't print a newline
   printf(" world:\n");
-  for (int r = -1; r < WDHT + 1; r++) {
-    for (int c = -1; c < WDWD + 1; c++) {
-      printf("%c", isalive_w(world, r, c) ? alive : dead);
+  for (uint16_t r = -1; r < WDHT + 1; r++) {
+    for (uint16_t c = -1; c < WDWD + 1; c++) {
+      if (r < 0 || c < 0 || r >= WDHT || c >= WDWD) {
+        printf("%c", isalive_w(world, r, c) ? balive : bdead);
+      } else {
+        printf("%c", isalive_w(world, r, c) ? alive : dead);
+      }
     }
     printf("\n");
   }
 }
 
-unsafe void printworldcode_w(world_t* unsafe world, bit onlyalive) {
-  uint16_t rm = UINT16_MAX;
-  uint16_t cm = UINT16_MAX;
+unsafe void printworldcode_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], uint8_t onlyalive) {
+  uint16_t rm = ~0;
+  uint16_t cm = ~0;
 
   for (int r = 0; r < WDHT; r++) {
     for (int c = 0; c < WDWD; c++) {
@@ -52,71 +57,45 @@ unsafe void printworldcode_w(world_t* unsafe world, bit onlyalive) {
   }
 }
 
-// // world_t hashes are packed into bits, thus we need to extract them
-// unsafe bit isalive_w(world_t* unsafe world, int16_t r, int16_t c) {
-//   return BITTESTM(world->hash, r + 1, c + 1, WDWD + 2);
-// }
-
-// set the inactive hash to make sure the world is kept in sync
-unsafe void setalive_w(world_t* unsafe world, int16_t r, int16_t c) {
-  BITSETM(world->hash, r + 1, c + 1, WDWD + 2);
+unsafe void blank_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)]) {
+  memset(world, 0, BITNSLOTSM(WDHT + 2, WDWD + 2));
 }
 
-unsafe void setdead_w(world_t* unsafe world, int16_t r, int16_t c) {
-  BITCLEARM(world->hash, r + 1, c + 1, WDWD + 2);
+unsafe uint8_t isalive_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
+  return BITTESTM(*world, r + 1, c + 1, WDWD + 2);
 }
 
-// unsafe void set_w(world_t* unsafe world, int16_t r, int16_t c, bit alive) {
-//   if (alive) {
-//     BITSETM(world->hash, r + 1, c + 1, WDWD + 2);
-//   } else {
-//     BITCLEARM(world->hash, r + 1, c + 1, WDWD + 2);
-//   }
-// }
-
-unsafe uint8_t mooreneighbours_w(world_t* unsafe world, int16_t r, int16_t c) {
-  bit i = 0;
-  i += isalive_w(world, r - 1, c - 1);
-  i += isalive_w(world, r - 1, c    );
-  i += isalive_w(world, r - 1, c + 1);
-  i += isalive_w(world, r,     c - 1);
-  // if (i >= 4) {
-  //   return 4;
-  // }
-  i += isalive_w(world, r,     c + 1);
-  // if (i >= 4) {
-  //   return 4;
-  // }
-  i += isalive_w(world, r + 1, c - 1);
-  // if (i >= 4) {
-  //   return 4;
-  // }
-  i += isalive_w(world, r + 1, c    );
-  // if (i >= 4) {
-  //   return 4;
-  // }
-  i += isalive_w(world, r + 1, c + 1);
-  return i;
+unsafe void setalive_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
+  BITSETM(*world, r + 1, c + 1, WDWD + 2);
 }
 
-// rules for game of life
-unsafe bit step_w(world_t* unsafe world, int16_t r, int16_t c) {
-  // int8_t dr[8] = {-1, -1, -1, +0, +0, +1, +1, +1};
-  // int8_t dc[8] = {-1, +0, +1, -1, +1, +1, +0, -1};
-  // uint8_t neighbours = 0;
-  //
-  // for (int i = 0; i < 8 && neighbours < 4; i++) {
-  //   neighbours += isalive_w(world, r + dr[i], c + dc[i]);
-  // }
-  //
-  // return neighbours == 3 || (neighbours == 2 && isalive_w(world, r, c));
-
-  uint8_t neighbours = mooreneighbours_w(world, r, c);
-
-  return neighbours == 3 || (neighbours == 2 && isalive_w(world, r, c));
+unsafe void setdead_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
+  BITCLEARM(*world, r + 1, c + 1, WDWD + 2);
 }
 
-unsafe void random_w(world_t* unsafe world, int16_t sr, int16_t sc, int16_t er, int16_t ec, uint32_t seed) {
+unsafe void set_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c, uint8_t alive) {
+  if (alive) {
+    BITSETM(*world, r + 1, c + 1, WDWD + 2);
+  } else {
+    BITCLEARM(*world, r + 1, c + 1, WDWD + 2);
+  }
+}
+
+unsafe uint16_t allbitfieldpacked_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], uint16_t r, uint16_t c) {
+    uint16_t i = 0;
+    i |= isalive_w(world, r - 1, c - 1) << 0;
+    i |= isalive_w(world, r - 1, c    ) << 1;
+    i |= isalive_w(world, r - 1, c + 1) << 2;
+    i |= isalive_w(world, r,     c - 1) << 3;
+    i |= isalive_w(world, r,     c    ) << 4;
+    i |= isalive_w(world, r,     c + 1) << 5;
+    i |= isalive_w(world, r + 1, c - 1) << 6;
+    i |= isalive_w(world, r + 1, c    ) << 7;
+    i |= isalive_w(world, r + 1, c + 1) << 8;
+    return i;
+}
+
+unsafe void random_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t sr, int16_t sc, int16_t er, int16_t ec, uint32_t seed) {
   srand(seed);
   for (int r = sr; r < er; r++) {
     for (int c = sc; c < ec; c++) {
@@ -124,7 +103,7 @@ unsafe void random_w(world_t* unsafe world, int16_t sr, int16_t sc, int16_t er, 
     }
   }}
 
-unsafe void checkboard_w(world_t* unsafe world, int16_t sr, int16_t sc, int16_t er, int16_t ec) {
+unsafe void checkboard_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t sr, int16_t sc, int16_t er, int16_t ec) {
   for (int r = sr, x = 0; r < er; r++) {
     for (int c = sc; c < ec; c++, x++) {
       set_w(world, r, c, x % 2 == 0);
@@ -134,7 +113,7 @@ unsafe void checkboard_w(world_t* unsafe world, int16_t sr, int16_t sc, int16_t 
     }
   }}
 
-unsafe void gardenofeden6_w(world_t* unsafe world, int16_t r, int16_t c) {
+unsafe void gardenofeden6_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
   setalive_w(world, 0 + r, 1 + c);
   setalive_w(world, 0 + r, 3 + c);
   setalive_w(world, 0 + r, 4 + c);
@@ -193,14 +172,14 @@ unsafe void gardenofeden6_w(world_t* unsafe world, int16_t r, int16_t c) {
   setalive_w(world, 9 + r, 8 + c);
 }
 
-unsafe void block_w(world_t* unsafe world, int16_t r, int16_t c) {
+unsafe void block_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
   setalive_w(world, 0 + r, 0 + c);
   setalive_w(world, 0 + r, 1 + c);
   setalive_w(world, 1 + r, 0 + c);
   setalive_w(world, 1 + r, 1 + c);
 }
 
-unsafe void beehive_w(world_t* unsafe world, int16_t r, int16_t c) {
+unsafe void beehive_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
   setalive_w(world, 0 + r, 1 + c);
   setalive_w(world, 0 + r, 2 + c);
   setalive_w(world, 1 + r, 0 + c);
@@ -209,7 +188,7 @@ unsafe void beehive_w(world_t* unsafe world, int16_t r, int16_t c) {
   setalive_w(world, 2 + r, 2 + c);
 }
 
-unsafe void loaf_w(world_t* unsafe world, int16_t r, int16_t c) {
+unsafe void loaf_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
   setalive_w(world, 0 + r, 1 + c);
   setalive_w(world, 0 + r, 2 + c);
   setalive_w(world, 1 + r, 0 + c);
@@ -219,7 +198,7 @@ unsafe void loaf_w(world_t* unsafe world, int16_t r, int16_t c) {
   setalive_w(world, 3 + r, 2 + c);
 }
 
-unsafe void boat_w(world_t* unsafe world, int16_t r, int16_t c) {
+unsafe void boat_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
   setalive_w(world, 0 + r, 0 + c);
   setalive_w(world, 0 + r, 1 + c);
   setalive_w(world, 1 + r, 0 + c);
@@ -227,24 +206,24 @@ unsafe void boat_w(world_t* unsafe world, int16_t r, int16_t c) {
   setalive_w(world, 2 + r, 1 + c);
 }
 
-unsafe void blinker0_w(world_t* unsafe world, int16_t r, int16_t c) {
+unsafe void blinker0_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
   setalive_w(world, 0 + r, 0 + c);
   setalive_w(world, 0 + r, 1 + c);
   setalive_w(world, 0 + r, 2 + c);
 }
 
-unsafe void blinker1_w(world_t* unsafe world, int16_t r, int16_t c) {
+unsafe void blinker1_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
   setalive_w(world, 0 + r, 0 + c);
   setalive_w(world, 1 + r, 0 + c);
   setalive_w(world, 2 + r, 0 + c);
 }
 
-unsafe void toad0_w(world_t* unsafe world, int16_t r, int16_t c) {
+unsafe void toad0_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
   blinker0_w(world, 0 + r, 1 + c);
   blinker0_w(world, 1 + r, 0 + c);
 }
 
-unsafe void clock_w(world_t* unsafe world, int16_t r, int16_t c) {
+unsafe void clock_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
   setalive_w(world, 0 + r, 1 + c);
   setalive_w(world, 1 + r, 2 + c);
   setalive_w(world, 1 + r, 3 + c);
@@ -253,7 +232,7 @@ unsafe void clock_w(world_t* unsafe world, int16_t r, int16_t c) {
   setalive_w(world, 3 + r, 2 + c);
 }
 
-unsafe void tumbler_w(world_t* unsafe world, int16_t r, int16_t c) {
+unsafe void tumbler_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
   setalive_w(world, 0 + r, 1 + c);
   setalive_w(world, 0 + r, 5 + c);
   blinker1_w(world, 0 + r, 0 + c);
@@ -264,12 +243,12 @@ unsafe void tumbler_w(world_t* unsafe world, int16_t r, int16_t c) {
   block_w(world, 4 + r, 4 + c);
 }
 
-unsafe void beacon_w(world_t* unsafe world, int16_t r, int16_t c) {
+unsafe void beacon_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
   block_w(world, 0 + r, 0 + c);
   block_w(world, 2 + r, 2 + c);
 }
 
-unsafe void pulsar_w(world_t* unsafe world, int16_t r, int16_t c) {
+unsafe void pulsar_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
   blinker0_w(world, 0 + r, 2 + c);
   blinker0_w(world, 0 + r, 8 + c);
   blinker0_w(world, 5 + r, 2 + c);
@@ -288,7 +267,7 @@ unsafe void pulsar_w(world_t* unsafe world, int16_t r, int16_t c) {
   blinker1_w(world, 8 + r, 12 + c);
 }
 
-unsafe void pentadecathlon_w(world_t* unsafe world, int16_t r, int16_t c) {
+unsafe void pentadecathlon_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
   setalive_w(world, 0 + r, 2 + c);
   setalive_w(world, 0 + r, 7 + c);
   setalive_w(world, 1 + r, 0 + c);
@@ -303,7 +282,7 @@ unsafe void pentadecathlon_w(world_t* unsafe world, int16_t r, int16_t c) {
   setalive_w(world, 2 + r, 7 + c);
 }
 
-unsafe void glider_w(world_t* unsafe world, int16_t r, int16_t c) {
+unsafe void glider_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
   setalive_w(world, 0 + r, 1 + c);
   setalive_w(world, 1 + r, 2 + c);
   setalive_w(world, 2 + r, 0 + c);
@@ -311,7 +290,7 @@ unsafe void glider_w(world_t* unsafe world, int16_t r, int16_t c) {
   setalive_w(world, 2 + r, 2 + c);
 }
 
-unsafe void lwss_w(world_t* unsafe world, int16_t r, int16_t c) {
+unsafe void lwss_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
   setalive_w(world, 0 + r, 0 + c);
   setalive_w(world, 0 + r, 3 + c);
   setalive_w(world, 2 + r, 0 + c);
@@ -319,13 +298,13 @@ unsafe void lwss_w(world_t* unsafe world, int16_t r, int16_t c) {
   blinker1_w(world, 1 + r, 4 + c);
 }
 
-unsafe void rpentomino_w(world_t* unsafe world, int16_t r, int16_t c) {
+unsafe void rpentomino_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
   setalive_w(world, 0 + r, 2 + c);
   setalive_w(world, 1 + r, 0 + c);
   blinker1_w(world, 0 + r, 1 + c);
 }
 
-unsafe void diehard_w(world_t* unsafe world, int16_t r, int16_t c) {
+unsafe void diehard_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
   setalive_w(world, 0 + r, 6 + c);
   setalive_w(world, 1 + r, 0 + c);
   setalive_w(world, 1 + r, 1 + c);
@@ -333,7 +312,7 @@ unsafe void diehard_w(world_t* unsafe world, int16_t r, int16_t c) {
   blinker0_w(world, 2 + r, 5 + c);
 }
 
-unsafe void acorn_w(world_t* unsafe world, int16_t r, int16_t c) {
+unsafe void acorn_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
   setalive_w(world, 0 + r, 1 + c);
   setalive_w(world, 1 + r, 3 + c);
   setalive_w(world, 2 + r, 0 + c);
@@ -341,7 +320,7 @@ unsafe void acorn_w(world_t* unsafe world, int16_t r, int16_t c) {
   blinker0_w(world, 2 + r, 4 + c);
 }
 
-unsafe void glidergun_w(world_t* unsafe world, int16_t r, int16_t c) {
+unsafe void glidergun_w(uint8_t* unsafe world[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
   setalive_w(world, 0 + r, 24 + c);
   setalive_w(world, 1 + r, 22 + c);
   setalive_w(world, 1 + r, 24 + c);

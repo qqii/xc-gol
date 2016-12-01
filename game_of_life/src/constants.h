@@ -15,8 +15,8 @@
 #define OFWD 0
 
 // world height
-#define WDHT 16
-#define WDWD 16
+#define WDHT IMHT//1024 + 256 + 8 + 4
+#define WDWD IMWD//1024 + 256 + 8 + 4
 
 #define ITERATIONS 1024 // UINTMAX_MAX
 
