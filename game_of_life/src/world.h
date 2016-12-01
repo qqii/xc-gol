@@ -17,4 +17,7 @@ unsafe uint32_t alivecount_w(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)])
 // sets the board in a checkerboard pattern
 unsafe void checkboard_w(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int16_t sr, int16_t sc, int16_t er, int16_t ec);
 
+// sets the board in a random pattern
+unsafe void random_w(uint8_t (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int16_t sr, int16_t sc, int16_t er, int16_t ec, uint32_t seed);
+
 #endif

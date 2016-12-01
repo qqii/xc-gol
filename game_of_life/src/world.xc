@@ -1,6 +1,7 @@
 #include "world.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 
 extern uint8_t hamming[16]; // hamming weight to calculate alive cells
 
@@ -68,6 +69,19 @@ unsafe void checkboard_w(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int
     }
     if ((ec - sc) % 2 == 0) {
       x++;
+    }
+  }
+}
+
+unsafe void random_w(uint8_t (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int16_t sr, int16_t sc, int16_t er, int16_t ec, uint32_t seed){
+  srand(seed);
+  for (int r = sr; r < er; r++) {
+    for (int c = sc; c < ec; c++) {
+      if (rand() < RAND_MAX / 2) {
+        BITSETP(*world, r, c, WDWD);
+      } else {
+        BITCLEARP(*world, r, c, WDWD);
+      }
     }
   }
 }
