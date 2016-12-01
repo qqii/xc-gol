@@ -3,12 +3,12 @@
 
 #include <stdint.h>
 
-#define FILENAME_IN "test.pgm"
+#define FILENAME_IN "64x64.pgm"
 #define FILENAME_OUT "testout.pgm"
 
 // image height and width
-#define IMHT 16
-#define IMWD 16
+#define IMHT 64
+#define IMWD 64
 
 // image to world offset
 #define OFHT 0
@@ -18,7 +18,7 @@
 #define WDHT IMHT//102/ + 256 + 8 + 4
 #define WDWD IMWD//1024 + 256 + 8 + 4
 
-#define WCOUNT 6
+#define WCOUNT 7
 
 #define ITERATIONS 16384//UINTMAX_MAX
 

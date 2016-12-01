@@ -151,8 +151,8 @@ unsafe void distributor(chanend ori, chanend but) {
     worker(world_p, 2, toWorker[2], toNextWorker[3], toNextWorker[2]);
     worker(world_p, 3, toWorker[3], toNextWorker[4], toNextWorker[3]);
     worker(world_p, 4, toWorker[4], toNextWorker[5], toNextWorker[4]);
-    worker(world_p, 5, toWorker[5], fromLastWorker, toNextWorker[5]);
-    // worker(world_p, 6, toWorker[6]);
+    worker(world_p, 5, toWorker[5], toNextWorker[6], toNextWorker[5]);
+    worker(world_p, 6, toWorker[6], fromLastWorker,  toNextWorker[6]);
     {
       t :> start;
       for (int I = 0; I < WCOUNT; I++){
@@ -221,7 +221,7 @@ unsafe void distributor(chanend ori, chanend but) {
           BITSET2(world, BITGET2(world, WDHT, c, WDWD + 4),        0, c, WDWD + 4);
         }
 
-        printworld_w(world);
+        // printworld_w(world);
 
         for(int I = 0; I < WDWD + 2; I+= 2){
           toNextWorker[0] <: 1;
@@ -233,7 +233,7 @@ unsafe void distributor(chanend ori, chanend but) {
 
 
         for(int I = 0; I < WCOUNT; I++){
-          toWorker[I] <: 0; 
+          toWorker[I] <: 0;
         }
       }
       t :> stop;
