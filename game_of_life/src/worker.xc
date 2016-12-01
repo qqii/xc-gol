@@ -12,13 +12,20 @@ extern bit hash[65536];  // hash for lookup
 
 unsafe void worker(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int wnumber, chanend toDist){
 
-  uint16_t startRow = (WDHT / WCOUNT) * wnumber;
-  uint16_t endRow = (WDHT / WCOUNT) * (wnumber + 1);
+  uint16_t startRow =(((WDHT + 2) / WCOUNT) * wnumber) & ~1; // FIXME
+  uint16_t endRow = (((WDHT + 2) / WCOUNT) * (wnumber + 1)) & ~1 ;
+  uint16_t rowCount = endRow - startRow;
 
-  bit buffer[BITSLOTSP(BUFFERWIDTH, (IMHT / WCOUNT))];
+  printf("Worker %d starting at %d and ending at %d\n", wnumber, startRow, endRow);
+
+  if (wnumber == WCOUNT - 1){
+    endRow = WDHT;
+  }
+
+  bit buffer[BITSLOTSP((WDHT / WCOUNT) + 2, BUFFERWIDTH * 2)];
   uint8_t bufferPointer = 0;
   
-  bit finished = 0;
+  int finished = 0;
   toDist :> int _;
   while (!finished){
     printf("Worker %d starting\n", wnumber); 
@@ -32,13 +39,12 @@ unsafe void worker(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int wnumb
 
       result = hash[chunk];
       
-      printf("r:%d\tc:%d\n", y, 0);
-      BITSET2(buffer, result, y % (WDHT / WCOUNT), bufferPointer, BUFFERWIDTH);
+      BITSET2(buffer, result, y % rowCount, (bufferPointer + 2) % (BUFFERWIDTH * 2), BUFFERWIDTH * 2);
     }
-    bufferPointer = bufferPointer + 1 % BUFFERWIDTH;
+    bufferPointer = (bufferPointer + 2) % (BUFFERWIDTH * 2);
     //the other columns
     for (int x = 2; x < WDWD + 2; x += 2) {
-      for (int y = startRow; y < endRow + 2; y += 2) {
+      for (int y = startRow; y < endRow; y += 2) {
         uint16_t chunk = 0;
         uint8_t result = 0;
 
@@ -46,17 +52,25 @@ unsafe void worker(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int wnumb
         chunk |= BITGET4((*world), y + 2, x, WDWD + 4) << 8;
 
         result = hash[chunk];
-        
-        printf("r:%d\tc:%d\n", y, x);
-        BITSET2(buffer, result, x % (WDHT / WCOUNT), bufferPointer, BUFFERWIDTH);
-        BITSET2((*world), BITGET2(buffer, y % (WDHT / WCOUNT), bufferPointer - 1, BUFFERWIDTH), y, x, WDWD + 4);
+
+        if (result){
+          printf("Writing \t%d forward from \t%d:%d\n",result, x + 1, y + 1);
+        } 
+        BITSET2(buffer, result, y % (rowCount), (bufferPointer + 2) % (BUFFERWIDTH * 2), BUFFERWIDTH * 2);
+        if (BITGET2(buffer, y % (WDHT / WCOUNT), bufferPointer, BUFFERWIDTH * 2)){
+          printf("Writing \t%d back to \t%d:%d\n",BITGET2(buffer, y % (WDHT / WCOUNT), bufferPointer, BUFFERWIDTH * 2), x, y);
+        }
+        BITSET2((*world), BITGET2(buffer, y % (rowCount), bufferPointer, BUFFERWIDTH * 2), y, x, WDWD + 4);
       }
-      bufferPointer = bufferPointer + 1 % BUFFERWIDTH;
+      bufferPointer = (bufferPointer + 2) % (BUFFERWIDTH * 2);
     }
 
+    printf("Worker %d writing back last row\n", wnumber);
     for (int y = startRow; y < endRow + 2; y += 2) {
-      BITSET2((*world), BITGET2(buffer, y % (WDHT / WCOUNT), bufferPointer - 1, BUFFERWIDTH), y, WDWD, WDWD + 4);
+      printf("Writing back to %d:%d\n", WDWD, y);
+      BITSET2((*world), BITGET2(buffer, y % (rowCount), bufferPointer - 1, BUFFERWIDTH * 2), y, WDWD, WDWD + 4);
     }
+    toDist <: 1;
 
     printf("Worker %d finished\n", wnumber);
     toDist :> finished; 

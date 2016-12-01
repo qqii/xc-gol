@@ -146,10 +146,10 @@ unsafe void distributor(chanend ori, chanend but) {
   par{
     worker(world_p, 0, toWorker[0]);
     worker(world_p, 1, toWorker[1]);
-    // worker(world_p, 2, toWorker[2]);
-    // worker(world_p, 3, toWorker[3]);
-    // worker(world_p, 4, toWorker[4]);
-    // worker(world_p, 5, toWorker[5]);
+    worker(world_p, 2, toWorker[2]);
+    worker(world_p, 3, toWorker[3]);
+    worker(world_p, 4, toWorker[4]);
+    worker(world_p, 5, toWorker[5]);
     // worker(world_p, 6, toWorker[6]);
     {
       t :> start;
@@ -238,6 +238,13 @@ unsafe void distributor(chanend ori, chanend but) {
         // }
 
         printworld_w(world);
+        for(int I = 0; I < WCOUNT; I++){
+          toWorker[I] :> int _;
+        }
+
+        for(int I = 0; I < WCOUNT; I++){
+          toWorker[I] <: 0; 
+        }
       }
       t :> stop;
       printf("Iteration: %llu\t", i);
