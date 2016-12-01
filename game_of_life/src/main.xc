@@ -142,14 +142,16 @@ unsafe void distributor(chanend ori, chanend but) {
   // start timer
 
   chan toWorker[WCOUNT];
+  chan toNextWorker[WCOUNT];
+  chan fromLastWorker;
 
   par{
-    worker(world_p, 0, toWorker[0]);
-    worker(world_p, 1, toWorker[1]);
-    worker(world_p, 2, toWorker[2]);
-    worker(world_p, 3, toWorker[3]);
-    worker(world_p, 4, toWorker[4]);
-    worker(world_p, 5, toWorker[5]);
+    worker(world_p, 0, toWorker[0], toNextWorker[1], toNextWorker[0]);
+    worker(world_p, 1, toWorker[1], toNextWorker[2], toNextWorker[1]);
+    worker(world_p, 2, toWorker[2], toNextWorker[3], toNextWorker[2]);
+    worker(world_p, 3, toWorker[3], toNextWorker[4], toNextWorker[3]);
+    worker(world_p, 4, toWorker[4], toNextWorker[5], toNextWorker[4]);
+    worker(world_p, 5, toWorker[5], fromLastWorker, toNextWorker[5]);
     // worker(world_p, 6, toWorker[6]);
     {
       t :> start;
@@ -218,26 +220,11 @@ unsafe void distributor(chanend ori, chanend but) {
           BITSET2(world, BITGET2(world,    2, c, WDWD + 4), WDHT + 2, c, WDWD + 4);
           BITSET2(world, BITGET2(world, WDHT, c, WDWD + 4),        0, c, WDWD + 4);
         }
-        // step world
-        // alive = 0;
-        // for (int r = 0; r < WDHT + 2; r += 2) {
-        //   for (int c = 0; c < WDWD + 2; c += 2) {
-        //     uint16_t chunk = 0;
-        //     uint8_t result = 0;
 
-        //     chunk |= BITGET4(world, r,     c, WDWD + 4);
-        //     chunk |= BITGET4(world, r + 2, c, WDWD + 4) << 8;
+        for(int I = 0; I < WDWD; I+= 2){
+          toNextWorker[0] <: 1;
+        }
 
-        //     result = hash[chunk];
-
-        //     if (2 <= r && r <= WDHT && 2 <= c && c <= WDWD) {
-        //       alive += hamming[result];
-        //     }
-        //     BITSET2(world, result, r, c, WDWD + 4);
-        //   }
-        // }
-
-        printworld_w(world);
         for(int I = 0; I < WCOUNT; I++){
           toWorker[I] :> int _;
         }
@@ -250,7 +237,7 @@ unsafe void distributor(chanend ori, chanend but) {
       printf("Iteration: %llu\t", i);
       printf("Elapsed Time (ns): %lu0\t", stop - start);
       printf("Alive Cells: %d\n", alive);
-      // printworld_w(world);
+      printworld_w(world);
     }
   }
 }
