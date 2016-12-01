@@ -147,7 +147,7 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
             printf("Iteration: %llu\t", i);
             printf("Elapsed Time (ns): %lu0\t", stop - start);
             printf("Alive Cells: %d\n", alivecount_w(world_p));
-            printworld_w(world, i);
+            // printworld_w(world, i);
             // wait until untilt
             ori :> uint8_t _;
             break;
