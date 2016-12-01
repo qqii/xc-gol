@@ -45,6 +45,7 @@ void orientation(client interface i2c_master_if i2c, chanend toDist) {
     }
   }
 }
+
 void button(in port b, chanend toDist) {
   uint8_t val;
   // detect sw1 one time

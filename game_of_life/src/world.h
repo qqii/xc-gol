@@ -16,6 +16,7 @@ void print_ix(int16_t r, int16_t c);
 
 #define set_s(strip, r, c, alive) if (alive) { BITSETM((strip)->line, (r), (c), WDWD); } else { BITCLEARM((strip)->line, (r), (c), WDWD); }
 
+unsafe void printworkerworld_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)]);
 
 // prints a strip
 unsafe void printstrip_s(strip_t (*unsafe strip));
@@ -27,6 +28,8 @@ unsafe void printworld_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)]
 unsafe void printworldcode_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], uint8_t onlyalive);
 
 unsafe void blank_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)]);
+
+unsafe void blankworker_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)]);
 
 // checks a cell is alive
 // unsafe uint8_t isalive_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c);

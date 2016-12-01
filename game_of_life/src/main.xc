@@ -17,14 +17,14 @@ on tile[0]: out  port p_leds    = XS1_PORT_4F; //port to access xCore-200 LEDs
 
 
 unsafe void worker(uint8_t index, chanend above, chanend below) {
-  printf("worker[%d]: hello!\n", index);
+  printf("worker[%d]: started\n", index);
   uint8_t val = 0;
   // strip of the owned world
-  // uint8_t world[BITNSLOTSM((WDHT / WORKERS) + 2, WDWD + 2)];
+  uint8_t world[BITNSLOTSM((WDHT / WORKERS) + 2, WDWD + 2)];
+  uint8_t (*unsafe worldp)[BITNSLOTSM((WDHT / WORKERS) + 2, WDWD + 2)] = &world;
   // uint8_t buffer[BITNSLOTSM(2, WDWD)];
   uint8_t hash[512];
   // TODO: consider passing this in somehow
-  // uint8_t (*unsafe worldp)[BITNSLOTSM((WDHT / WORKERS) + 2, WDWD + 2)] = &world;
   // uint32_t alive = 0;
 
   for (uint16_t i = 0; i < 512; i++) {
@@ -47,13 +47,31 @@ unsafe void worker(uint8_t index, chanend above, chanend below) {
     hash[i] = neighbours == 3 || (neighbours == 2 && self);
   }
 
-  printf("worker[%d]: finished calculating hash\n", index);
+  blank_w(worldp);
+
+  // Sync finished calculating hash
+  above :> uint8_t _;
+  below <: val;
+
+  strip_t strip;
+  for (int i = 0; i < index; i++) {
+    for (int j = 0; j < WDHT / WORKERS; j++) {
+      below :> strip;
+      above <: strip;
+    }
+  }
+  for (int i = 0; i < (WDHT / WORKERS); i++) {
+    below :> strip;
+    for (int c = 0; c < WDWD; c++) {
+      set_w(worldp, i, c, isalive_s(&strip, 0, c));
+    }
+  }
 
   above :> uint8_t _;
-  printf("worker[%d]: recieved from above\n", index);
+  printf("worker[%d]: saved world\n", index);
+  printworkerworld_w(worldp);
   below <: val;
-  printf("worker[%d]: sent to below\n", index);
-
+  printf("worker[%d]: done\n", index);
 }
 
 unsafe void distributor(chanend ori, chanend but, chanend above, chanend below) {
@@ -68,7 +86,7 @@ unsafe void distributor(chanend ori, chanend but, chanend above, chanend below) 
   printf("%s -> %s\n%dx%d -> %dx%d\nPress SW1 to load...\n", FILENAME_IN, FILENAME_OUT, IMHT, IMWD, WDHT, WDWD);
 
   // wait for SW1
-  but :> uint8_t _;
+  // but :> uint8_t _;
   p_leds <: D1_g;
 
   if (_openinpgm(FILENAME_IN, IMWD, IMHT)) {
@@ -82,15 +100,19 @@ unsafe void distributor(chanend ori, chanend but, chanend above, chanend below) 
     for (int r = 0; r < IMHT; r++) {
       _readinline(line, IMWD);
       for (int c = 0; c < IMWD; c++) {
-        set_w(&(strip.line), -1, c - 1, line[c]);
-        // set_w(worldp, r + OFHT, c + OFWD, line[c]);
+        set_s(&strip, 0, c, line[c]);
         alive += line[c] & 1;
       }
-      printstrip_s(&strip);
-      
+      // printstrip_s(&strip);
+      above <: strip;
     }
   }
   _closeinpgm();
+
+  below <: val;
+  above :> uint8_t _;
+
+  printf("distributor: done\n");
 }
 
 // // main concurrent thread
@@ -268,9 +290,9 @@ unsafe int main(void) {
     on tile[0]: orientation(i2c[0], c_ori);
     on tile[0]: button(p_buttons, c_but);
     // on tile[0]: distributor(c_ori, c_but);
-    on tile[0]: distributor(c_ori, c_but, c_wor[WORKERS], c_wor[0]);                 // thread to coordinate work on image
+    on tile[0]: distributor(c_ori, c_but, c_wor[WORKERS], c_wor[0]); // thread to coordinate work on image
     par (uint8_t i = 0; i < WORKERS; i++) {
-      on tile[0]: worker(i, c_wor[i], c_wor[i + 1]);
+      on tile[1]: worker(i, c_wor[i], c_wor[i + 1]);
     }
   }
 
