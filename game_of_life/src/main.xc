@@ -16,7 +16,7 @@ on tile[0]: in   port p_buttons = XS1_PORT_4E; //port to access xCore-200 button
 on tile[0]: out  port p_leds    = XS1_PORT_4F; //port to access xCore-200 LEDs
 
 
-unsafe void worker(uint8_t index, chanend above, chanend below) {
+unsafe void worker(uint8_t index, streaming chanend above, streaming chanend below) {
   printf("worker[%d]: started\n", index);
   uint8_t val = 0;
   // strip of the owned world
@@ -172,7 +172,7 @@ unsafe void worker(uint8_t index, chanend above, chanend below) {
   printf("worker[%d]: finished\n", index);
 }
 
-unsafe void distributor(chanend ori, chanend but, chanend above, chanend below) {
+unsafe void distributor(chanend ori, chanend but, streaming chanend above, streaming chanend below) {
   uint8_t val = 0;
   uint32_t alive = 0;
   strip_t strip;
@@ -280,7 +280,7 @@ unsafe void distributor(chanend ori, chanend but, chanend above, chanend below) 
 unsafe int main(void) {
   i2c_master_if i2c[1]; //interface to orientation
   chan c_ori, c_but;    // channels for io actions
-  chan c_wor[WORKERS + 1];
+  streaming chan c_wor[WORKERS + 1];
 
   par {
     on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10); // server thread providing orientation data
