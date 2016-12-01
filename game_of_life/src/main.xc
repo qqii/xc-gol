@@ -34,7 +34,7 @@ unsafe void distributor(chanend ori, chanend but) {
   t :> start;
   blank_w(worldp);
   // technically not needed
-  memset(hash, 0, 512);
+  // memset(hash, 0, 512);
 
   for (uint16_t i = 0; i < 512; i++) {
     // ihg fed cba
@@ -80,7 +80,7 @@ unsafe void distributor(chanend ori, chanend but) {
   }
   _closeinpgm();
 
-  printworld_w(world);
+  printworld_w(worldp);
 
   t :> start;
   for (i = 0; i < ITERATIONS; i++) {
@@ -177,7 +177,7 @@ unsafe void distributor(chanend ori, chanend but) {
   printf("Iteration: %llu\t", i);
   printf("Elapsed Time (ns): %lu0\t", stop - start);
   printf("Alive Cells: %d\n", alive);
-  printworld_w(world);
+  printworld_w(worldp);
 }
 
 // Initialise and  read orientation, send first tilt event to channel
