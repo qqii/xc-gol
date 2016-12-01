@@ -62,9 +62,9 @@ unsafe void checkboard_w(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int
   for (int r = sr, x = 0; r < er; r++) {
     for (int c = sc; c < ec; c++, x++) {
       if (x % 2 == 0) {
-        BITSETP(*world, r, c, WDWD);
+        BITSETP(*world, r, c, WDWD + 4);
       } else {
-        BITCLEARP(*world, r, c, WDWD);
+        BITCLEARP(*world, r, c, WDWD + 4);
       }
     }
     if ((ec - sc) % 2 == 0) {
