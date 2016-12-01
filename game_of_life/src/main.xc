@@ -221,6 +221,8 @@ unsafe void distributor(chanend ori, chanend but) {
           BITSET2(world, BITGET2(world, WDHT, c, WDWD + 4),        0, c, WDWD + 4);
         }
 
+        printworld_w(world);
+
         for(int I = 0; I < WDWD + 2; I+= 2){
           toNextWorker[0] <: 1;
         }
@@ -229,7 +231,6 @@ unsafe void distributor(chanend ori, chanend but) {
           toWorker[I] :> int _;
         }
 
-        printworld_w(world);
 
         for(int I = 0; I < WCOUNT; I++){
           toWorker[I] <: 0; 
