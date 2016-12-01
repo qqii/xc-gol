@@ -29,9 +29,9 @@ unsafe void firstWorker(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int 
         chunk |= BITGET4((*world), y + 2, x, WDWD + 4) << 8;
 
         result = hash[chunk];
-        if (2 <= y && y <= WDHT && 2 <= x && x <= WDWD) { 
-          alive += hamming[result]; 
-        } 
+        if (2 <= y && y <= WDHT && 2 <= x && x <= WDWD) {
+          alive += hamming[result];
+        }
 
         BITSET2((*world), result, y, x, WDWD + 4);
       }
@@ -63,7 +63,7 @@ unsafe void worker(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int wnumb
         chunk |= BITGET4((*world), y + 2, x, WDWD + 4) << 8;
 
         result = hash[chunk];
-        alive += hamming[result]; 
+        alive += hamming[result];
 
         BITSET2((*world), result, y, x, WDWD + 4);
       }
@@ -79,6 +79,9 @@ unsafe void lastWorker(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int w
 
   uint16_t startRow =(((WDHT + 2) / WCOUNT) * wnumber) & ~1; // FIXME
   uint16_t endRow = (((WDHT + 2) / WCOUNT) * (wnumber + 1)) & ~1 ;
+  if (wnumber == WCOUNT - 1) {
+    endRow = WDHT + 2;
+  }
   // printf("Worker %d starting at %d and ending at %d\n", wnumber, startRow, endRow);
 
   int finished = 0;
