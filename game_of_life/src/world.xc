@@ -61,9 +61,9 @@ unsafe void blank_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)]) {
   memset(world, 0, BITNSLOTSM(WDHT + 2, WDWD + 2));
 }
 
-unsafe uint8_t isalive_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
-  return BITTESTM(*world, r + 1, c + 1, WDWD + 2);
-}
+// unsafe uint8_t isalive_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
+//   return BITTESTM(*world, r + 1, c + 1, WDWD + 2);
+// }
 
 unsafe void setalive_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c) {
   BITSETM(*world, r + 1, c + 1, WDWD + 2);
@@ -73,13 +73,13 @@ unsafe void setdead_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], i
   BITCLEARM(*world, r + 1, c + 1, WDWD + 2);
 }
 
-unsafe void set_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c, uint8_t alive) {
-  if (alive) {
-    BITSETM(*world, r + 1, c + 1, WDWD + 2);
-  } else {
-    BITCLEARM(*world, r + 1, c + 1, WDWD + 2);
-  }
-}
+// unsafe void set_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c, uint8_t alive) {
+//   if (alive) {
+//     BITSETM(*world, r + 1, c + 1, WDWD + 2);
+//   } else {
+//     BITCLEARM(*world, r + 1, c + 1, WDWD + 2);
+//   }
+// }
 
 unsafe uint16_t allbitfieldpacked_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], uint16_t r, uint16_t c) {
     uint16_t i = 0;

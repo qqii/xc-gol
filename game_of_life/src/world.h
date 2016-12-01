@@ -18,8 +18,8 @@ unsafe void printworldcode_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD +
 unsafe void blank_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)]);
 
 // checks a cell is alive
-unsafe uint8_t isalive_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c);
-// #define isalive_w(world, r, c) (BITTESTM((world), (r) + 1, (c) + 1, WDWD + 2))
+// unsafe uint8_t isalive_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c);
+#define isalive_w(world, r, c) (BITTESTM(*(world), (r) + 1, (c) + 1, WDWD + 2))
 
 // sets the cell to be alive
 unsafe void setalive_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c);
@@ -30,8 +30,8 @@ unsafe void setdead_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], i
 // #define setdead_w(world, r, c) (BITCLEARM((world), (r) + 1, (c) + 1, WDWD + 2))
 
 // calls setalive_w or setdead_w depending on the alive argument
-unsafe void set_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c, uint8_t alive);
-// #define set_w(world, r, c, alive) if (alive) { BITSETM(*(world), (r) + 1, (c) + 1, WDWD + 2); } else { BITCLEARM(*(world), (r) + 1, (c) + 1, WDWD + 2); }
+// unsafe void set_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c, uint8_t alive);
+#define set_w(world, r, c, alive) if (alive) { BITSETM(*(world), (r) + 1, (c) + 1, WDWD + 2); } else { BITCLEARM(*(world), (r) + 1, (c) + 1, WDWD + 2); }
 
 // calculate the all bit field shiftfted into a uint16_t
 unsafe uint16_t allbitfieldpacked_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], uint16_t r, uint16_t c);
