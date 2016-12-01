@@ -3,10 +3,10 @@
 
 #include <stdint.h>
 
-#define FILENAME_IN "test.pgm"
+#define FILENAME_IN "lwss.pgm"
 #define FILENAME_OUT "testout.pgm"
 
-// #define VERBOSE
+#define VERBOSE
 
 // image height and width, has to match FILENAME_IN
 #define IMHT 16

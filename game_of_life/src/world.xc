@@ -20,8 +20,8 @@ void printworld_w(bit world[BITSLOTSP(WDHT + 4, WDWD + 4)], uintmax_t i) {
   printf("world:\n");
   for (uint16_t r = 2; r < WDHT + 2; r++) {
     for (uint16_t c = 2; c < WDWD + 2; c++) {
-      uint16_t sr = pmod((r - i), WDHT);
-      uint16_t sc = pmod((c - i), WDWD);
+      uint16_t sr = pmod((r - i), WDHT + 2);
+      uint16_t sc = pmod((c - i), WDWD + 2);
       printf("%c", BITTESTP(world, sr, sc, WDWD + 4) ? balive : bdead);
     }
     printf("\n");
@@ -36,8 +36,8 @@ void printworld_w(bit world[BITSLOTSP(WDHT + 4, WDWD + 4)], uintmax_t i) {
   printf("world:\n");
   for (uint16_t r = 2; r < WDHT + 2; r++) {
     for (uint16_t c = 2; c < WDWD + 2; c++) {
-      uint16_t sr = pmod((r - i), WDHT);
-      uint16_t sc = pmod((c - i), WDWD);
+      uint16_t sr = pmod((r - i), WDHT + 2);
+      uint16_t sc = pmod((c - i), WDWD + 2);
       printf("%s", BITTESTP(world, sr, sc, WDWD + 4) ? alive : dead);
     }
     printf("\n");
