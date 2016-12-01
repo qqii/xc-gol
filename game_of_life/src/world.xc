@@ -17,12 +17,14 @@ void printworld_w(bit world[BITSLOTSP(WDHT + 4, WDWD + 4)], uintmax_t i) {
   // prints with the border wrap
   printf("{%d, %d} ", WDHT + 4, WDWD + 4);
   printf("world:\n");
-  for (uint16_t r = 0; r < WDHT + 4; r++) {
-    for (uint16_t c = 0; c < WDWD + 4; c++) {
+  for (int16_t r = 0; r < WDHT + 4; r++) {
+    for (int16_t c = 0; c < WDWD + 4; c++) {
+      int sr = pmod((r - i), WDHT + 4);
+      int sc = pmod((c - i), WDWD + 4);
       if (r < 2 || c < 2 || r >= WDHT + 2 || c >= WDWD + 2) {
-        printf("%c", BITTESTP(world, pmod(r - i, WDHT), pmod(c - i, WDWD), WDWD + 4) ? balive : bdead);
+        printf("%c", BITTESTP(world, sr, sc, WDWD + 4) ? balive : bdead);
       } else {
-        printf("%c", BITTESTP(world, pmod(r - i, WDHT), pmod(c - i, WDWD), WDWD + 4) ? alive : dead);
+        printf("%c", BITTESTP(world, sr, sc, WDWD + 4) ? alive : dead);
       }
     }
     printf("\n");
@@ -37,7 +39,9 @@ void printworld_w(bit world[BITSLOTSP(WDHT + 4, WDWD + 4)], uintmax_t i) {
   printf("world:\n");
   for (uint16_t r = 2; r < WDHT + 2; r++) {
     for (uint16_t c = 2; c < WDWD + 2; c++) {
-      printf("%s", BITTESTP(world, pmod(r - i, WDHT), pmod(c - i, WDWD), WDWD + 4) ? alive : dead);
+      int sr = pmod((r - i), WDHT + 4);
+      int sc = pmod((c - i), WDWD + 4);
+      printf("%s", BITTESTP(world, sr, sc, WDWD + 4) ? alive : dead);
     }
     printf("\n");
   }

@@ -102,8 +102,8 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
     printf("Error openening %s for reading.\n.", FILENAME_IN);
     printf("Defaulting to a blank (or hardcoded) world...\n.");
 
-    // checkboard_w(world_p, 0, 0, WDHT + 4, WDWD + 4);
-    random_w(world_p, 0, 0, WDHT + 4, WDWD + 4, 0);
+    checkboard_w(world_p, 0, 0, WDHT + 4, WDWD + 4);
+    // random_w(world_p, 0, 0, WDHT + 4, WDWD + 4, 0);
     // TODO: put random world generation here
   } else {
     uint8_t line[IMWD]; // read in storage
@@ -223,7 +223,7 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
         for(int i = 0; i < WCOUNT; i++){
           toWorker[i] :> int _;
         }
-        printworld_w(world, i);
+        printworld_w(world, i + 1);
       }
       t :> stop;
       // no more iterations, workers can stop now
