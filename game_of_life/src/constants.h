@@ -20,6 +20,8 @@
 
 #define ITERATIONS 1024 // UINTMAX_MAX
 
+#define WORKERS 2;
+
 // UNTILT_THRESHOLD < TILT_THRESHOLD to avoid it detecting multiple times
 #define TILT_THRESHOLD   30
 #define UNTILT_THRESHOLD 10
