@@ -41,7 +41,7 @@ void orientation(client interface i2c_master_if i2c, chanend c_ori) {
     } while (!status_data & 0x08);
 
     // get new x-axis tilt value
-    int x = read_acceleration(i2c, FXOS8700EQ_OUT_X_MSB);
+    int16_t x = read_acceleration(i2c, FXOS8700EQ_OUT_X_MSB);
 
     // send signal to distributor after first tilt
     if (tilted) {

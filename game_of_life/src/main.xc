@@ -106,9 +106,9 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
     random_w(world_p, 0, 0, WDHT + 4, WDWD + 4, 0);
   } else {
     uint8_t line[IMWD]; // read in storage
-    for (int r = 0; r < IMHT; r++) {
+    for (uint16_t r = 0; r < IMHT; r++) {
       _readinline(line, IMWD);
-      for (int c = 0; c < IMWD; c++) {
+      for (uint16_t c = 0; c < IMWD; c++) {
         if (line[c]) {
           // image is offset from 0, 0 by OFHT, OFWD
           BITSETP(world, r + 2 + OFHT, c + 2 + OFWD, WDWD + 4);
@@ -162,10 +162,10 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
               printf("Skipping save...\n.");
             } else {
               uint8_t line[WDWD]; // write out in storage
-              for (int r = 0; r < WDHT; r++) {
-                for (int c = 0; c < WDWD; c++) {
-                  int sr = pmod((r - i), WDHT + 4);
-                  int sc = pmod((c - i), WDWD + 4);
+              for (int16_t r = 0; r < WDHT; r++) {
+                for (int16_t c = 0; c < WDWD; c++) {
+                  uint16_t sr = pmod((r - i), WDHT + 4);
+                  uint16_t sc = pmod((c - i), WDWD + 4);
                   if (BITTESTP(world, sr, sc, WDWD + 4)) {
                     line[c] = ~0;
                   } else {
@@ -193,7 +193,7 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
         // that would be very indented
 
         // sync start
-        for(int i = 0; i < WCOUNT; i++){
+        for(uint8_t i = 0; i < WCOUNT; i++){
           // send 0 for not finished
           toWorker[i] <: 0;
         }
@@ -204,11 +204,11 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
         BITSET2(world, BITGET2(world, WDHT,    2, WDWD + 4),        0, WDWD + 2, WDWD + 4);
         BITSET2(world, BITGET2(world,    2, WDWD, WDWD + 4), WDWD + 2,        0, WDWD + 4);
         BITSET2(world, BITGET2(world,    2,    2, WDWD + 4), WDWD + 2, WDWD + 2, WDWD + 4);
-        for (int r = 2; r < WDHT + 2; r += 2) {
+        for (uint16_t r = 2; r < WDHT + 2; r += 2) {
           BITSET2(world, BITGET2(world, r,    2, WDWD + 4), r, WDWD + 2, WDWD + 4);
           BITSET2(world, BITGET2(world, r, WDWD, WDWD + 4), r,        0, WDWD + 4);
         }
-        for (int c = 2; c < WDWD + 2; c += 2) {
+        for (uint16_t c = 2; c < WDWD + 2; c += 2) {
           BITSET2(world, BITGET2(world,    2, c, WDWD + 4), WDHT + 2, c, WDWD + 4);
           BITSET2(world, BITGET2(world, WDHT, c, WDWD + 4),        0, c, WDWD + 4);
         }
@@ -217,11 +217,11 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
         // write over what another worker hasn't read
         // workers perfrom work in columns
         // start worker[0] for 1 line
-        for(int i = 0; i < WDWD + 2; i += 2){
+        for(uint16_t i = 0; i < WDWD + 2; i += 2){
           toNextWorker[0] <: 1;
         }
         // sync completion
-        for(int i = 0; i < WCOUNT; i++){
+        for(uint8_t i = 0; i < WCOUNT; i++){
           toWorker[i] :> int _;
         }
         printworld_w(world, i + 1);
@@ -230,7 +230,7 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
       // no more iterations, workers can stop now
       // unfortunatly with 7 workers there are not enough channels to
       // gracefully shutdown the other threads
-      for(int i = 0; i < WCOUNT; i++){
+      for(uint8_t i = 0; i < WCOUNT; i++){
         // send 0 for finished
         toWorker[i] <: 1;
       }

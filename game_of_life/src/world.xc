@@ -20,8 +20,8 @@ void printworld_w(bit world[BITSLOTSP(WDHT + 4, WDWD + 4)], uintmax_t i) {
   printf("world:\n");
   for (uint16_t r = 2; r < WDHT + 2; r++) {
     for (uint16_t c = 2; c < WDWD + 2; c++) {
-      int sr = pmod((r - i), WDHT + 4);
-      int sc = pmod((c - i), WDWD + 4);
+      uint16_t sr = pmod((r - i), WDHT + 4);
+      uint16_t sc = pmod((c - i), WDWD + 4);
       printf("%c", BITTESTP(world, sr, sc, WDWD + 4) ? balive : bdead);
     }
     printf("\n");
@@ -36,8 +36,8 @@ void printworld_w(bit world[BITSLOTSP(WDHT + 4, WDWD + 4)], uintmax_t i) {
   printf("world:\n");
   for (uint16_t r = 2; r < WDHT + 2; r++) {
     for (uint16_t c = 2; c < WDWD + 2; c++) {
-      int sr = pmod((r - i), WDHT + 4);
-      int sc = pmod((c - i), WDWD + 4);
+      uint16_t sr = pmod((r - i), WDHT + 4);
+      uint16_t sc = pmod((c - i), WDWD + 4);
       printf("%s", BITTESTP(world, sr, sc, WDWD + 4) ? alive : dead);
     }
     printf("\n");
@@ -60,8 +60,8 @@ unsafe uint32_t alivecount_w(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)])
 }
 
 unsafe void checkboard_w(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int16_t sr, int16_t sc, int16_t er, int16_t ec) {
-  for (int r = sr, x = 0; r < er; r++) {
-    for (int c = sc; c < ec; c++, x++) {
+  for (uint16_t r = sr, x = 0; r < er; r++) {
+    for (uint16_t c = sc; c < ec; c++, x++) {
       if (x % 2 == 0) {
         BITSETP(*world, r, c, WDWD + 4);
       } else {
@@ -76,8 +76,8 @@ unsafe void checkboard_w(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int
 
 unsafe void random_w(uint8_t (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int16_t sr, int16_t sc, int16_t er, int16_t ec, uint32_t seed) {
   srand(seed);
-  for (int r = sr; r < er; r++) {
-    for (int c = sc; c < ec; c++) {
+  for (uint16_t r = sr; r < er; r++) {
+    for (uint16_t c = sc; c < ec; c++) {
       if (rand() < RAND_MAX / 2) {
         BITSETP(*world, r, c, WDWD + 4);
       } else {
