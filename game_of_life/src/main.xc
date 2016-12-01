@@ -145,7 +145,7 @@ unsafe void distributor(chanend ori, chanend but, chanend c_led) {
   }
   _closeinpgm();
 
-  // printworld_w(world, 0);
+  printworld_w(world, 0);
 
   // start timer
 
@@ -229,7 +229,7 @@ unsafe void distributor(chanend ori, chanend but, chanend c_led) {
           BITSET2(world, BITGET2(world, WDHT, c, WDWD + 4),        0, c, WDWD + 4);
         }
 
-        printworld_w(world, i);
+        // printworld_w(world, i);
 
         for(int I = 0; I < WDWD + 2; I+= 2){
           toNextWorker[0] <: 1;

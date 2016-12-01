@@ -25,8 +25,6 @@ void printworld_w(bit world[BITSLOTSP(WDHT + 4, WDWD + 4)], uintmax_t i) {
 #else
   char *dead   = "◻ ";
   char *alive  = "◼ ";
-  char *bdead  = "◻ ";
-  char *balive = "▦ ";
 
   printf("{%d, %d} ", WDHT + 4, WDWD + 4);
   printf("world:\n");
