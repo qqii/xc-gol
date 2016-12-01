@@ -2,15 +2,16 @@
 
 #include <stdio.h>
 
-extern uint8_t hamming[16]; // hamming weight to calculate alive cells
+// hamming weight to calculate alive cells
+extern uint8_t hamming[16];
 
 void printworld_w(bit world[BITSLOTSP(WDHT + 4, WDWD + 4)], uintmax_t i) {
   // characters for pretty printing the world
 #ifdef _WIN32 // the superior printing
-  char dead   =  32;
-  char alive  = 219;
-  char bdead  = 176;
-  char balive = 178;
+  char dead   =  32; // space
+  char alive  = 219; // full block
+  char bdead  = 176; // light shade
+  char balive = 178; // medium shade
 
   printf("{%d, %d} ", WDHT + 4, WDWD + 4);
   printf("world:\n");
@@ -25,6 +26,7 @@ void printworld_w(bit world[BITSLOTSP(WDHT + 4, WDWD + 4)], uintmax_t i) {
     printf("\n");
   }
 #else
+  // These characters don't print well on Windows
   char *dead   = "◻ ";
   char *alive  = "◼ ";
 
