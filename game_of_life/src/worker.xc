@@ -17,10 +17,6 @@ unsafe void worker(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int wnumb
 
   // printf("Worker %d starting at %d and ending at %d\n", wnumber, startRow, endRow);
 
-  if (wnumber == WCOUNT - 1){
-    endRow = WDHT;
-  }
-
   int finished = 0;
   toDist :> int _;
   while (!finished){
