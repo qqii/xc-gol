@@ -42,9 +42,10 @@ unsafe void worker(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int wnumb
     }
     bufferPointer = (bufferPointer + 2) % (BUFFERWIDTH * 2);
     //the other columns
-    for (int x = 2; x < WDWD + 2; x += 2) {
+    for (int x = 2; x < WDWD + 4; x += 2) {
       fromLastWorker :> int _;
       for (int y = startRow; y < endRow; y += 2) {
+        printf("Worker %d calculating %d:%d\n", wnumber, x, y);
         uint16_t chunk = 0;
         uint8_t result = 0;
 
@@ -63,7 +64,7 @@ unsafe void worker(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int wnumb
     }
 
     for (int y = startRow; y < endRow + 2; y += 2) {
-      BITSET2((*world), BITGET2(buffer, y % (rowCount), bufferPointer - 1, BUFFERWIDTH * 2), y, WDWD, WDWD + 4);
+      BITSET2((*world), BITGET2(buffer, y % (rowCount), bufferPointer, BUFFERWIDTH * 2), y, WDWD, WDWD + 4);
     }
     toDist <: 1;
 
