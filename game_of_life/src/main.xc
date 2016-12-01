@@ -129,12 +129,9 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
 
   par{
     // start worker threads
-    worker(world_p, 0, toWorker[0], toNextWorker[1], toNextWorker[0]);
-    worker(world_p, 1, toWorker[1], toNextWorker[2], toNextWorker[1]);
-    worker(world_p, 2, toWorker[2], toNextWorker[3], toNextWorker[2]);
-    worker(world_p, 3, toWorker[3], toNextWorker[4], toNextWorker[3]);
-    worker(world_p, 4, toWorker[4], toNextWorker[5], toNextWorker[4]);
-    worker(world_p, 5, toWorker[5], toNextWorker[6], toNextWorker[5]);
+    par (uint8_t i = 0; i < WCOUNT - 1; i++) {
+      worker(world_p, i, toWorker[i], toNextWorker[i + 1], toNextWorker[i]);
+    }
     lastWorker(world_p, 6, toWorker[6],  toNextWorker[6]);
 
     // worker management code
