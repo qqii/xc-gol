@@ -10,22 +10,29 @@
 
 void printworld_w(bit world[BITSLOTSP(WDHT + 4, WDWD + 4)], uintmax_t i) {
   // characters for pretty printing the world
-  char *dead;
-  char *alive;
-  char *bdead;
-  char *balive;
-
 #ifdef _WIN32 // the superior printing
-  dead   =  32;
-  alive  = 219;
-  bdead  = 176;
-  balive = 178;
+  char dead   =  32;
+  char alive  = 219;
+  char bdead  = 176;
+  char balive = 178;
+
+  printf("{%d, %d} ", WDHT + 4, WDWD + 4);
+  printf("world:\n");
+  for (uint16_t r = 0; r < WDHT + 4; r++) {
+    for (uint16_t c = 0; c < WDWD + 4; c++) {
+      if (r < 2 || c < 2 || r >= WDHT + 2 || c >= WDWD + 2) {
+        printf("%c", BITTESTP(world, pmod(r - i, WDHT), pmod(c - i, WDWD), WDWD + 4) ? balive : bdead);
+      } else {
+        printf("%c", BITTESTP(world, pmod(r - i, WDHT), pmod(c - i, WDWD), WDWD + 4) ? alive : dead);
+      }
+    }
+    printf("\n");
+  }
 #else
-  dead   = "◻ ";
-  alive  = "◼ ";
-  bdead  = "◻ ";
-  balive = "▦ ";
-#endif
+  char *dead   = "◻ ";
+  char *alive  = "◼ ";
+  char *bdead  = "◻ ";
+  char *balive = "▦ ";
 
   printf("{%d, %d} ", WDHT + 4, WDWD + 4);
   printf("world:\n");
@@ -39,6 +46,7 @@ void printworld_w(bit world[BITSLOTSP(WDHT + 4, WDWD + 4)], uintmax_t i) {
     }
     printf("\n");
   }
+#endif
 }
 
 #endif
