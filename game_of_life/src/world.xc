@@ -43,6 +43,8 @@ void printworld_w(bit world[BITSLOTSP(WDHT + 4, WDWD + 4)], uintmax_t i) {
 #endif
 }
 
+// this may return incorrect results if the board width isn't a multiple of 2
+// in that case it may read into the border wrap
 unsafe uint32_t alivecount_w(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)]){
   uint16_t alive = 0;
 

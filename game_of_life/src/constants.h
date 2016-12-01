@@ -22,8 +22,8 @@
 // number of workers
 #define WCOUNT 7
 
-#define ITERATIONS UINTMAX_MAX // basically forever
-// #define ITERATIONS 16384
+// #define ITERATIONS UINTMAX_MAX // basically forever
+#define ITERATIONS 1024
 
 // UNTILT_THRESHOLD < TILT_THRESHOLD to avoid it detecting multiple times
 #define TILT_THRESHOLD   30
