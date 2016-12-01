@@ -3,12 +3,12 @@
 
 #include <stdint.h>
 
-#define FILENAME_IN "64x64.pgm"
+#define FILENAME_IN "test.pgm"
 #define FILENAME_OUT "testout.pgm"
 
 // image height and width
-#define IMHT 64
-#define IMWD 64
+#define IMHT 16
+#define IMWD 16
 
 // image to world offset
 #define OFHT 0
