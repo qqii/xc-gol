@@ -6,21 +6,24 @@
 #define FILENAME_IN "test.pgm"
 #define FILENAME_OUT "testout.pgm"
 
-// image height and width
+// image height and width, has to match FILENAME_IN
 #define IMHT 16
 #define IMWD 16
+
+// world height and width, doesn't have to match image
+// larger worlds will cause the image to be placed from OFHT, OFWD
+#define WDHT IMHT//102/ + 256 + 8 + 4
+#define WDWD IMWD//1024 + 256 + 8 + 4
 
 // image to world offset
 #define OFHT 0
 #define OFWD 0
 
-// world height
-#define WDHT IMHT//102/ + 256 + 8 + 4
-#define WDWD IMWD//1024 + 256 + 8 + 4
-
+// number of workers
 #define WCOUNT 7
 
-#define ITERATIONS 16384//UINTMAX_MAX
+// #define ITERATIONS UINTMAX_MAX // basically forever
+#define ITERATIONS 16384
 
 // UNTILT_THRESHOLD < TILT_THRESHOLD to avoid it detecting multiple times
 #define TILT_THRESHOLD   30
@@ -48,6 +51,7 @@
 #define SW1 14
 #define SW2 13
 
+// comment out on linux
 #define _WIN32
 
 #endif
