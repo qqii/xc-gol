@@ -29,6 +29,18 @@ void led(out port p, chanend toDist) {
   }
 }
 
+unsafe int getAlive(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)]){
+  int alive = 0;
+
+  for(int I = 2; I < WDHT + 2; I++){
+    for (int J = 2; J < WDWD + 2; J++){
+      alive += hamming[BITGET2((*world), I, J, WDWD + 4)];
+    }
+  }
+
+  return alive;
+}
+
 // main concurrent thread
 unsafe void distributor(chanend ori, chanend but, chanend c_led) {
   // world
@@ -174,7 +186,7 @@ unsafe void distributor(chanend ori, chanend but, chanend c_led) {
             c_led <: D1_r;
             printf("Iteration: %llu\t", i);
             printf("Elapsed Time (ns): %lu0\t", stop - start);
-            printf("Alive Cells: %d\n", alive);
+            printf("Alive Cells: %d\n", getAlive(world_p));
             printworld_w(world, i);
             // wait until untilt
             ori :> uint8_t _;
@@ -247,7 +259,7 @@ unsafe void distributor(chanend ori, chanend but, chanend c_led) {
       t :> stop;
       printf("Iteration: %llu\t", i);
       printf("Elapsed Time (ns): %lu0\t", stop - start);
-      printf("Alive Cells: %d\n", alive);
+      printf("Alive Cells: %d\n", getAlive(world_p));
       printworld_w(world, i);
     }
   }
