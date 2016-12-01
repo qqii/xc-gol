@@ -2,6 +2,8 @@
 
 #include <stdio.h>
 
+extern uint8_t hamming[16]; // hamming weight to calculate alive cells
+
 void printworld_w(bit world[BITSLOTSP(WDHT + 4, WDWD + 4)], uintmax_t i) {
   // characters for pretty printing the world
 #ifdef _WIN32 // the superior printing
@@ -35,4 +37,16 @@ void printworld_w(bit world[BITSLOTSP(WDHT + 4, WDWD + 4)], uintmax_t i) {
     printf("\n");
   }
 #endif
+}
+
+unsafe uint32_t alivecount_w(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)]){
+  uint16_t alive = 0;
+
+  for(uint16_t c = 2; c < WDHT + 2; c += 2){
+    for (uint16_t r = 2; r < WDWD + 2; r += 2){
+      alive += hamming[BITGET2((*world), r, c, WDWD + 4)];
+    }
+  }
+
+  return alive;
 }

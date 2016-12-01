@@ -7,7 +7,10 @@
 #include <xs1.h>
 #include "i2c.h"
 #include "pgmIO.h"
+#include "constants.h"
+#include "world.h"
 #include "worker.h"
+
 
 bit hamming[16]; // hamming weight to calculate alive cells
 bit hash[65536];  // hash for lookup
@@ -15,10 +18,13 @@ bit hash[65536];  // hash for lookup
 // interface ports to orientation
 on tile[0]: port p_scl = XS1_PORT_1E;
 on tile[0]: port p_sda = XS1_PORT_1F;
-//  both of these must be on port 0
-on tile[0]: in   port p_buttons = XS1_PORT_4E; //port to access xCore-200 buttons
-on tile[0]: out  port p_leds    = XS1_PORT_4F; //port to access xCore-200 LEDs
+// both of these must be on port 0
+// port to access xCore-200 buttons
+on tile[0]: in   port p_buttons = XS1_PORT_4E;
+// port to access xCore-200 LEDs
+on tile[0]: out  port p_leds    = XS1_PORT_4F;
 
+// led thread simply fowards data from channel to led
 void led(out port p, chanend toDist) {
   int val;
   while (1) {
@@ -27,16 +33,66 @@ void led(out port p, chanend toDist) {
   }
 }
 
-unsafe int getAlive(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)]){
-  int alive = 0;
-
-  for(int I = 2; I < WDHT + 2; I++){
-    for (int J = 2; J < WDWD + 2; J++){
-      alive += hamming[BITGET2((*world), I, J, WDWD + 4)];
+// orientation thread sends any tilt or untilt
+void orientation(client interface i2c_master_if i2c, chanend c_ori) {
+  i2c_regop_res_t result;
+  char status_data = 0;
+  uint8_t tilted = 0;
+  // Configure FXOS8700EQ
+  result =
+      i2c.write_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_XYZ_DATA_CFG_REG, 0x01);
+  if (result != I2C_REGOP_SUCCESS) {
+    printf("I2C write reg failed\n");
+  }
+  // Enable FXOS8700EQ
+  result = i2c.write_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_CTRL_REG_1, 0x01);
+  if (result != I2C_REGOP_SUCCESS) {
+    printf("I2C write reg failed\n");
+  }
+  // Probe the orientation x-axis forever
+  while (1) {
+    // check until new orientation data is available
+    do {
+      status_data =
+          i2c.read_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_DR_STATUS, result);
+    } while (!status_data & 0x08);
+    // get new x-axis tilt value
+    int x = read_acceleration(i2c, FXOS8700EQ_OUT_X_MSB);
+    // send signal to distributor after first tilt
+    if (tilted) {
+      if (x < UNTILT_THRESHOLD) {
+        c_ori <: tilted;
+        tilted = 0;
+      }
+    } else {
+      if (x > TILT_THRESHOLD) {
+        c_ori <: tilted;
+        tilted = 1;
+      }
     }
   }
+}
 
-  return alive;
+// button thread sends the first sw1 and any subsiquent sw2 presses
+void button(in port b, chanend c_but) {
+  uint8_t val;
+  // detect sw1 one time
+  while (1) {
+    b when pinseq(15)  :> void;
+    b when pinsneq(15) :> val;
+    if (val == SW1) {
+      c_but <: val;
+      break;
+    }
+  }
+  // detect subsiquent sw2
+  while (1) {
+    b when pinseq(15)  :> void;   // check that no button is pressed
+    b when pinsneq(15) :> val;    // check if some buttons are pressed
+    if (val == SW2) {
+      c_but <: val;
+    }
+  }
 }
 
 // main concurrent thread
@@ -184,7 +240,7 @@ unsafe void distributor(chanend ori, chanend but, chanend c_led) {
             c_led <: D1_r;
             printf("Iteration: %llu\t", i);
             printf("Elapsed Time (ns): %lu0\t", stop - start);
-            printf("Alive Cells: %d\n", getAlive(world_p));
+            printf("Alive Cells: %d\n", alivecount_w(world_p));
             printworld_w(world, i);
             // wait until untilt
             ori :> uint8_t _;
@@ -257,70 +313,8 @@ unsafe void distributor(chanend ori, chanend but, chanend c_led) {
       t :> stop;
       printf("Iteration: %llu\t", i);
       printf("Elapsed Time (ns): %lu0\t", stop - start);
-      printf("Alive Cells: %d\n", getAlive(world_p));
+      printf("Alive Cells: %d\n", alivecount_w(world_p));
       printworld_w(world, i);
-    }
-  }
-}
-
-// orientation thread sends any tilt or untilt
-void orientation(client interface i2c_master_if i2c, chanend c_ori) {
-  i2c_regop_res_t result;
-  char status_data = 0;
-  uint8_t tilted = 0;
-  // Configure FXOS8700EQ
-  result =
-      i2c.write_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_XYZ_DATA_CFG_REG, 0x01);
-  if (result != I2C_REGOP_SUCCESS) {
-    printf("I2C write reg failed\n");
-  }
-  // Enable FXOS8700EQ
-  result = i2c.write_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_CTRL_REG_1, 0x01);
-  if (result != I2C_REGOP_SUCCESS) {
-    printf("I2C write reg failed\n");
-  }
-  // Probe the orientation x-axis forever
-  while (1) {
-    // check until new orientation data is available
-    do {
-      status_data =
-          i2c.read_reg(FXOS8700EQ_I2C_ADDR, FXOS8700EQ_DR_STATUS, result);
-    } while (!status_data & 0x08);
-    // get new x-axis tilt value
-    int x = read_acceleration(i2c, FXOS8700EQ_OUT_X_MSB);
-    // send signal to distributor after first tilt
-    if (tilted) {
-      if (x < UNTILT_THRESHOLD) {
-        c_ori <: tilted;
-        tilted = 0;
-      }
-    } else {
-      if (x > TILT_THRESHOLD) {
-        c_ori <: tilted;
-        tilted = 1;
-      }
-    }
-  }
-}
-
-// button thread sends the first sw1 and any subsiquent sw2 presses
-void button(in port b, chanend c_but) {
-  uint8_t val;
-  // detect sw1 one time
-  while (1) {
-    b when pinseq(15)  :> void;
-    b when pinsneq(15) :> val;
-    if (val == SW1) {
-      c_but <: val;
-      break;
-    }
-  }
-  // detect subsiquent sw2
-  while (1) {
-    b when pinseq(15)  :> void;   // check that no button is pressed
-    b when pinsneq(15) :> val;    // check if some buttons are pressed
-    if (val == SW2) {
-      c_but <: val;
     }
   }
 }

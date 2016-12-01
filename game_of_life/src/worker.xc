@@ -2,8 +2,8 @@
 
 #include <stdio.h>
 
-extern bit hamming[16]; // hamming weight to calculate alive cells
-extern bit hash[65536];  // hash for lookup
+extern uint8_t hamming[16]; // hamming weight to calculate alive cells
+extern uint8_t hash[65536];  // hash for lookup
 
 unsafe void worker(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int wnumber, chanend toDist, chanend toNextWorker, chanend fromLastWorker){
 
