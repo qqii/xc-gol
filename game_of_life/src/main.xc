@@ -19,7 +19,7 @@ on tile[0]: in   port p_buttons = XS1_PORT_4E; // port to access xCore-200 butto
 on tile[0]: out  port p_leds    = XS1_PORT_4F; // port to access xCore-200 LEDs
 
 // main thread to perform precomputation and spawn workers
-unsafe void distributor(chanend ori, chanend but, chanend c_led) {
+unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
   // world of 2x2 cells with border
   bit world[BITSLOTSP(WDHT + 4, WDWD + 4)];
   // pointer to world to give to workers
@@ -242,19 +242,22 @@ unsafe void distributor(chanend ori, chanend but, chanend c_led) {
   }
 }
 
-// Orchestrate concurrent system and start up all threads
+// args can be used for timing instead of defined constants
+// TODO: consider using this for testing
 unsafe int main(unsigned int argc, char* unsafe argv[argc]) {
   i2c_master_if i2c[1]; // interface to orientation
-  chan c_ori, c_but, c_led;    // orientation and button channel
+  chan c_ori, c_but;    // orientation, button and led channel
+  streaming chan c_led;
 
   par {
-    on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10); // server thread providing orientation data
+    // these must be placed on tile[0] to access ports
+    on tile[0]: i2c_master(i2c, 1, p_scl, p_sda, 10);
     on tile[0]: orientation(i2c[0], c_ori);
     on tile[0]: button(p_buttons, c_but);
     on tile[0]: led(p_leds, c_led);
-    on tile[1]: distributor(c_ori, c_but, c_led); // thread to coordinate work on image
+    // this must be placed on tile[1] for more than 3 workers
+    on tile[1]: distributor(c_ori, c_but, c_led);
   }
 
-  // currently the program will never stop, the io thread does not support graceful shutdown
   return 0;
 }

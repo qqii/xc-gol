@@ -5,7 +5,7 @@
 #include <platform.h>
 #include "constants.h"
 
-void led(out port p, chanend toDist) {
+void led(out port p, streaming chanend toDist) {
   int val;
 
   while (1) {
