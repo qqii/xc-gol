@@ -56,3 +56,18 @@ unsafe uint32_t alivecount_w(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)])
 
   return alive;
 }
+
+unsafe void checkboard_w(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int16_t sr, int16_t sc, int16_t er, int16_t ec) {
+  for (int r = sr, x = 0; r < er; r++) {
+    for (int c = sc; c < ec; c++, x++) {
+      if (x % 2 == 0) {
+        BITSETP(*world, r, c, WDWD);
+      } else {
+        BITCLEARP(*world, r, c, WDWD);
+      }
+    }
+    if ((ec - sc) % 2 == 0) {
+      x++;
+    }
+  }
+}

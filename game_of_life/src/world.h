@@ -14,4 +14,7 @@ void printworld_w(bit world[BITSLOTSP(WDHT + 4, WDWD + 4)], uintmax_t i);
 // returns the number of alive cells
 unsafe uint32_t alivecount_w(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)]);
 
+// sets the board in a checkerboard pattern
+unsafe void checkboard_w(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int16_t sr, int16_t sc, int16_t er, int16_t ec);
+
 #endif

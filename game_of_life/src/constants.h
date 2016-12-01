@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define FILENAME_IN "test.pgm"
+#define FILENAME_IN "testa.pgm"
 #define FILENAME_OUT "testout.pgm"
 
 // image height and width, has to match FILENAME_IN
