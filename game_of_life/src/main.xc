@@ -7,8 +7,6 @@
 #include <xs1.h>
 #include "i2c.h"
 #include "pgmIO.h"
-#include "constants.h"
-#include "world.h"
 #include "worker.h"
 
 bit hamming[16]; // hamming weight to calculate alive cells

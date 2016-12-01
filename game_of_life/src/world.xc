@@ -36,4 +36,3 @@ void printworld_w(bit world[BITSLOTSP(WDHT + 4, WDWD + 4)], uintmax_t i) {
   }
 #endif
 }
-

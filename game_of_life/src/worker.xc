@@ -1,9 +1,6 @@
-#ifndef _WORKER_H_
-#define _WORKER_H_
+#include "worker.h"
 
-#include "stdio.h"
-#include "constants.h"
-#include "bitmatrix.h"
+#include <stdio.h>
 
 extern bit hamming[16]; // hamming weight to calculate alive cells
 extern bit hash[65536];  // hash for lookup
@@ -69,5 +66,3 @@ unsafe void lastWorker(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], int w
     toDist :> finished;
   }
 }
-
-#endif
