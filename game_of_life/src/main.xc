@@ -17,12 +17,13 @@ on tile[0]: port p_sda = XS1_PORT_1F;
 on tile[0]: in   port p_buttons = XS1_PORT_4E; //port to access xCore-200 buttons
 on tile[0]: out  port p_leds    = XS1_PORT_4F; //port to access xCore-200 LEDs
 
+uint8_t hamming[16]; // hamming weight to calculate alive cells
+uint8_t hash[65536]; // hash for lookup
+
 // main concurrent thread
-void distributor(chanend ori, chanend but) {
+unsafe void distributor(chanend ori, chanend but) {
   // world
   bit world[BITSLOTSP(WDHT + 4, WDWD + 4)]; // world of 2x2 cells with border
-  bit hamming[16]; // hamming weight to calculate alive cells
-  bit hash[65536];  // hash for lookup
   uint32_t alive = 0;
   // timer
   timer t;
@@ -113,6 +114,9 @@ void distributor(chanend ori, chanend but) {
   if (_openinpgm(FILENAME_IN, IMWD, IMHT)) {
     printf("Error openening %s for reading.\n.", FILENAME_IN);
     printf("Defaulting to a blank (or hardcoded) world...\n.");
+
+    checkboard_w(&world, 0, 0, WDHT + 4, WDWD + 4);
+    // TODO: put random world generation here
   } else {
     // Read image line-by-line and send byte by byte to channel ch
     uint8_t line[IMWD]; // read in storage
@@ -132,7 +136,7 @@ void distributor(chanend ori, chanend but) {
   }
   _closeinpgm();
 
-  printworld_w(world);
+  printworld_w(world, i);
 
   // start timer
   t :> start;
@@ -145,14 +149,14 @@ void distributor(chanend ori, chanend but) {
         printf("Iteration: %llu\t", i);
         printf("Elapsed Time (ns): %lu0\t", stop - start);
         printf("Alive Cells: %d\n", alive);
-        printworld_w(world);
+        printworld_w(world, i);
         // wait until untilt
         ori :> uint8_t _;
         break;
       // button sw2
       case but :> uint8_t _:
         p_leds <: D1_b;
-        printworld_w(world);
+        printworld_w(world, i);
         // SAVE
         if (_openinpgm(FILENAME_IN, WDWD, WDHT)) {
           printf("Error opening %s for saving.\n.", FILENAME_OUT);
@@ -227,17 +231,18 @@ void distributor(chanend ori, chanend but) {
         if (2 <= r && r <= WDHT && 2 <= c && c <= WDWD) {
           alive += hamming[result];
         }
+
         BITSET2(world, result, r, c, WDWD + 4);
       }
     }
 
-    // printworld_w(world);
+    printworld_w(world, i);
   }
   t :> stop;
   printf("Iteration: %llu\t", i);
   printf("Elapsed Time (ns): %lu0\t", stop - start);
   printf("Alive Cells: %d\n", alive);
-  // printworld_w(world);
+  printworld_w(world, i);
 }
 
 // orientation thread sends any tilt or untilt

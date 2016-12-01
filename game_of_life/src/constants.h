@@ -3,12 +3,12 @@
 
 #include <stdint.h>
 
-#define FILENAME_IN "512x512.pgm"
+#define FILENAME_IN "testa.pgm"
 #define FILENAME_OUT "testout.pgm"
 
 // image height and width
-#define IMHT 512
-#define IMWD 512
+#define IMHT 16
+#define IMWD 16
 
 // image to world offset
 #define OFHT 0
@@ -45,5 +45,7 @@
 // constants for buttons
 #define SW1 14
 #define SW2 13
+
+#define _WIN32
 
 #endif
