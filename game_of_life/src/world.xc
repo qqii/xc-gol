@@ -30,6 +30,20 @@ unsafe void printworld_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)]
   }
 }
 
+// prints a strip
+unsafe void printstrip_s(strip_t (*unsafe strip)) {
+  // characters for pretty printing the world
+  char bdead  = 176; // low density dotted
+  char balive = 178; // high density dotted
+
+  // print_ix(0, WDWD); // print_ix doesn't print a newline
+  // printf(" strip:\n");
+  for (int16_t c = 0; c < WDWD; c++) {
+    printf("%c", isalive_w(&(strip->line), -1, c - 1) ? balive : bdead);
+  }
+  printf("\n");
+}
+
 unsafe void printworldcode_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], uint8_t onlyalive) {
   uint16_t rm = ~0;
   uint16_t cm = ~0;

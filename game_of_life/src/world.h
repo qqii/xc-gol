@@ -5,8 +5,20 @@
 #include "constants.h"
 #include "bitmatrix.h"
 
+typedef struct Strip {
+  uint8_t line[BITNSLOTSM(1, WDWD)];
+} strip_t;
+
 // prints an ix_t
 void print_ix(int16_t r, int16_t c);
+
+#define isalive_s(strip, r, c) (BITTESTM((strip)->line, (r), (c), WDWD))
+
+#define set_s(strip, r, c, alive) if (alive) { BITSETM((strip)->line, (r), (c), WDWD); } else { BITCLEARM((strip)->line, (r), (c), WDWD); }
+
+
+// prints a strip
+unsafe void printstrip_s(strip_t (*unsafe strip));
 
 // prints the world
 unsafe void printworld_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)]);

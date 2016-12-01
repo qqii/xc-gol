@@ -10,9 +10,9 @@
 #define IMHT 16
 #define IMWD 16
 
-// image to world offset
-#define OFHT 0
-#define OFWD 0
+// // image to world offset
+// #define OFHT 0
+// #define OFWD 0
 
 // world height
 #define WDHT IMHT//1024 + 256 + 8 + 4
@@ -20,7 +20,7 @@
 
 #define ITERATIONS 1024 // UINTMAX_MAX
 
-#define WORKERS 2;
+#define WORKERS 2
 
 // UNTILT_THRESHOLD < TILT_THRESHOLD to avoid it detecting multiple times
 #define TILT_THRESHOLD   30
