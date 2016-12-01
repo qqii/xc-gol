@@ -31,7 +31,7 @@ unsafe void setdead_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], i
 
 // calls setalive_w or setdead_w depending on the alive argument
 unsafe void set_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], int16_t r, int16_t c, uint8_t alive);
-// #define set_w(world, r, c, alive) if (alive) { BITSETM((world), (r) + 1, (c) + 1, WDWD + 2); } else { BITCLEARM((world), (r) + 1, (c) + 1, WDWD + 2); }
+// #define set_w(world, r, c, alive) if (alive) { BITSETM(*(world), (r) + 1, (c) + 1, WDWD + 2); } else { BITCLEARM(*(world), (r) + 1, (c) + 1, WDWD + 2); }
 
 // calculate the all bit field shiftfted into a uint16_t
 unsafe uint16_t allbitfieldpacked_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], uint16_t r, uint16_t c);
