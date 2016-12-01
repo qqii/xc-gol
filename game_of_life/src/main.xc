@@ -32,8 +32,8 @@ void led(out port p, chanend toDist) {
 unsafe int getAlive(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)]){
   int alive = 0;
 
-  for(int I = 2; I < WDHT + 2; I++){
-    for (int J = 2; J < WDWD + 2; J++){
+  for(int I = 2; I < WDHT + 2; I+=2){
+    for (int J = 2; J < WDWD + 2; J+=2){
       alive += hamming[BITGET2((*world), I, J, WDWD + 4)];
     }
   }
