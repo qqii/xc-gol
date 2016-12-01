@@ -16,7 +16,7 @@
 
 #define ITERATIONS 1024//UINTMAX_MAX
 
-#define WORKERS 4
+#define WORKERS 8
 
 #define WKHT (WDHT / WORKERS)
 

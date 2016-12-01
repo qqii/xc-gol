@@ -190,7 +190,7 @@ unsafe void distributor(chanend ori, chanend but, chanend above, chanend below) 
   printf("%s -> %s\n%dx%d -> %dx%d\nPress SW1 to load...\n", FILENAME_IN, FILENAME_OUT, IMHT, IMWD, WDHT, WDWD);
 
   // wait for SW1
-  // but :> uint8_t _;
+  but :> uint8_t _;
   p_leds <: D1_g;
 
   if (_openinpgm(FILENAME_IN, IMWD, IMHT)) {
@@ -274,7 +274,6 @@ unsafe void distributor(chanend ori, chanend but, chanend above, chanend below) 
   printf("Iteration: %llu\t", i);
   printf("Elapsed Time (ns): %lu0\t", stop - start);
   printf("Alive Cells: %d\n", alive);
-  // printworld_w(worldp);
 }
 
 // Orchestrate concurrent system and start up all threads
