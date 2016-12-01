@@ -48,4 +48,6 @@
 #define SW1 14
 #define SW2 13
 
+#define _WIN32
+
 #endif
