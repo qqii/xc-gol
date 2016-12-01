@@ -145,7 +145,7 @@ unsafe void distributor(chanend ori, chanend but, chanend c_led) {
   }
   _closeinpgm();
 
-  printworld_w(world);
+  // printworld_w(world, 0);
 
   // start timer
 
@@ -175,14 +175,14 @@ unsafe void distributor(chanend ori, chanend but, chanend c_led) {
             printf("Iteration: %llu\t", i);
             printf("Elapsed Time (ns): %lu0\t", stop - start);
             printf("Alive Cells: %d\n", alive);
-            printworld_w(world);
+            printworld_w(world, i);
             // wait until untilt
             ori :> uint8_t _;
             break;
           // button sw2
           case but :> uint8_t _:
             c_led <: D1_b;
-            printworld_w(world);
+            printworld_w(world, i);
             // SAVE
             if (_openinpgm(FILENAME_IN, WDWD, WDHT)) {
               printf("Error opening %s for saving.\n.", FILENAME_OUT);
@@ -229,7 +229,7 @@ unsafe void distributor(chanend ori, chanend but, chanend c_led) {
           BITSET2(world, BITGET2(world, WDHT, c, WDWD + 4),        0, c, WDWD + 4);
         }
 
-        // printworld_w(world);
+        printworld_w(world, i);
 
         for(int I = 0; I < WDWD + 2; I+= 2){
           toNextWorker[0] <: 1;
@@ -248,7 +248,7 @@ unsafe void distributor(chanend ori, chanend but, chanend c_led) {
       printf("Iteration: %llu\t", i);
       printf("Elapsed Time (ns): %lu0\t", stop - start);
       printf("Alive Cells: %d\n", alive);
-      printworld_w(world);
+      printworld_w(world, i);
     }
   }
 }
