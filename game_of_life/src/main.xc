@@ -33,6 +33,7 @@ void led(out port p, chanend toDist) {
 unsafe void distributor(chanend ori, chanend but, chanend c_led) {
   // world
   bit world[BITSLOTSP(WDHT + 4, WDWD + 4)]; // world of 2x2 cells with border
+  int workerAliveCount;
   uint32_t alive = 0;
 
   bit (*unsafe world_p)[BITSLOTSP(WDHT + 4, WDWD + 4)] = &world;
@@ -153,7 +154,7 @@ unsafe void distributor(chanend ori, chanend but, chanend c_led) {
   chan toNextWorker[WCOUNT];
 
   par{
-    worker(world_p, 0, toWorker[0], toNextWorker[1], toNextWorker[0]);
+    firstWorker(world_p, 0, toWorker[0], toNextWorker[1], toNextWorker[0]);
     worker(world_p, 1, toWorker[1], toNextWorker[2], toNextWorker[1]);
     worker(world_p, 2, toWorker[2], toNextWorker[3], toNextWorker[2]);
     worker(world_p, 3, toWorker[3], toNextWorker[4], toNextWorker[3]);
@@ -235,8 +236,10 @@ unsafe void distributor(chanend ori, chanend but, chanend c_led) {
           toNextWorker[0] <: 1;
         }
 
+        alive = 0;
         for(int I = 0; I < WCOUNT; I++){
-          toWorker[I] :> int _;
+          toWorker[I] :> workerAliveCount;
+          alive += workerAliveCount;
         }
 
 
