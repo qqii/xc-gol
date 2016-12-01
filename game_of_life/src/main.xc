@@ -115,7 +115,8 @@ unsafe void distributor(chanend ori, chanend but) {
     printf("Error openening %s for reading.\n.", FILENAME_IN);
     printf("Defaulting to a blank (or hardcoded) world...\n.");
 
-    checkboard_w(&world, 0, 0, WDHT + 4, WDWD + 4);
+    // checkboard_w(&world, 0, 0, WDHT + 4, WDWD + 4);
+    random_w(&world, 0, 0, WDHT + 4, WDWD + 4, 0);
     // TODO: put random world generation here
   } else {
     // Read image line-by-line and send byte by byte to channel ch
