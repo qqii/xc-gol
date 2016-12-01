@@ -224,7 +224,9 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
         for(int i = 0; i < WCOUNT; i++){
           toWorker[i] :> int _;
         }
+        #ifdef VERBOSE
         printworld_w(world, i + 1);
+        #endif
       }
       t :> stop;
       // no more iterations, workers can stop now
