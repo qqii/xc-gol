@@ -16,7 +16,7 @@ void print_ix(int16_t r, int16_t c);
 
 #define set_s(strip, r, c, alive) if (alive) { BITSETM((strip)->line, (r), (c), WDWD); } else { BITCLEARM((strip)->line, (r), (c), WDWD); }
 
-unsafe void printworkerworld_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)]);
+unsafe void printworkerworld_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], uint8_t border);
 
 // prints a strip
 unsafe void printstrip_s(strip_t (*unsafe strip));

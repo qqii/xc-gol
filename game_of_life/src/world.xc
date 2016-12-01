@@ -8,24 +8,33 @@ void print_ix(int16_t r, int16_t c) {
   printf("{%d, %d}", r, c);
 }
 
-unsafe void printworkerworld_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)]) {
+unsafe void printworkerworld_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)], uint8_t border) {
   // characters for pretty printing the world
   char dead   =  32; // space
   char alive  = 219; // full block
   char bdead  = 176; // low density dotted
   char balive = 178; // high density dotted
 
-  print_ix(WDHT, WDWD); // print_ix doesn't print a newline
-  printf(" world:\n");
-  for (int16_t r = -1; r < (WDHT / WORKERS) + 1; r++) {
-    for (int16_t c = -1; c < WDWD + 1; c++) {
-      if (r < 0 || c < 0 || r >= (WDHT / WORKERS) || c >= WDWD) {
-        printf("%c", isalive_w(world, r, c) ? balive : bdead);
-      } else {
-        printf("%c", isalive_w(world, r, c) ? alive : dead);
+  // print_ix(WDHT, WDWD); // print_ix doesn't print a newline
+  // printf(" world:\n");
+  if (border) {
+    for (int16_t r = -1; r < (WDHT / WORKERS) + 1; r++) {
+      for (int16_t c = -1; c < WDWD + 1; c++) {
+        if (r < 0 || c < 0 || r >= (WDHT / WORKERS) || c >= WDWD) {
+          printf("%c", isalive_w(world, r, c) ? balive : bdead);
+        } else {
+          printf("%c", isalive_w(world, r, c) ? alive : dead);
+        }
       }
+      printf("\n");
     }
-    printf("\n");
+  } else {
+    for (int16_t r = 0; r < (WDHT / WORKERS); r++) {
+      for (int16_t c = 0; c < WDWD; c++) {
+        printf("%c", isalive_w(world, r, c) ? balive : bdead);
+      }
+      printf("\n");
+    }
   }
 }
 
@@ -36,8 +45,8 @@ unsafe void printworld_w(uint8_t (*unsafe world)[BITNSLOTSM(WDHT + 2, WDWD + 2)]
   char bdead  = 176; // low density dotted
   char balive = 178; // high density dotted
 
-  print_ix(WDHT, WDWD); // print_ix doesn't print a newline
-  printf(" world:\n");
+  // print_ix(WDHT, WDWD); // print_ix doesn't print a newline
+  // printf(" world:\n");
   for (int16_t r = -1; r < WDHT + 1; r++) {
     for (int16_t c = -1; c < WDWD + 1; c++) {
       if (r < 0 || c < 0 || r >= WDHT || c >= WDWD) {
