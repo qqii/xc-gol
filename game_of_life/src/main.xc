@@ -164,8 +164,8 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
               uint8_t line[WDWD]; // write out in storage
               for (int16_t r = 0; r < WDHT; r++) {
                 for (int16_t c = 0; c < WDWD; c++) {
-                  uint16_t sr = pmod((r - i), WDHT + 4);
-                  uint16_t sc = pmod((c - i), WDWD + 4);
+                  uint16_t sr = pmod((r - i) - 2, WDHT) + 2;
+                  uint16_t sc = pmod((c - i) - 2, WDWD) + 2;
                   if (BITTESTP(world, sr, sc, WDWD + 4)) {
                     line[c] = ~0;
                   } else {
