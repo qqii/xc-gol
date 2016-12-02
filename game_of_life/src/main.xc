@@ -244,6 +244,7 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
         printf("Error opening %s for saving.\n.", FILENAME_OUT);
         printf("Skipping save...\n.");
       } else {
+        c_led <: D1_b;
         uint8_t line[WDWD]; // write out in storage
         for (int16_t r = 2; r < WDHT + 2; r++) {
           for (int16_t c = 2; c < WDWD + 2; c++) {
@@ -258,6 +259,7 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
           _writeoutline(line, WDWD);
         }
       }
+      c_led <: D0;
       _closeoutpgm();
     }
   }
