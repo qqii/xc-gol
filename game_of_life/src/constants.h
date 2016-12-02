@@ -25,7 +25,7 @@
 #define WCOUNT 7
 
 // #define ITERATIONS UINTMAX_MAX // basically forever
-#define ITERATIONS 1024
+#define ITERATIONS 2
 
 // UNTILT_THRESHOLD < TILT_THRESHOLD to avoid it detecting multiple times
 #define TILT_THRESHOLD   30
