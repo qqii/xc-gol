@@ -93,7 +93,7 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
   // end of precomputation
 
   // await sw1
-  // but :> uint8_t _;
+  but :> uint8_t _;
   // green led for reading
   c_led <: D1_g;
 
@@ -121,7 +121,7 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
     }
   }
   _closeinpgm();
-  // printworld_w(world, 0);
+  printworld_w(world, 0);
 
   // finished loading file
 
@@ -239,7 +239,7 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
       printf("Iteration: %llu\t", i);
       printf("Elapsed Time (ns): %lu0\t", stop - start);
       printf("Alive Cells: %d\n", alivecount_w(world_p));
-      // printworld_w(world, i);
+      printworld_w(world, i);
     }
   }
 }
