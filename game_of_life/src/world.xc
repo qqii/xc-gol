@@ -17,6 +17,7 @@ void printworld_w(bit world[BITSLOTSP(WDHT + 4, WDWD + 4)], uintmax_t i) {
 
   // prints with the border wrap
   printf("{%d, %d} ", WDHT + 4, WDWD + 4);
+  printf(" %s ", FILENAME_IN);
   printf("world:\n");
   for (uint16_t r = 2; r < WDHT + 2; r++) {
     for (uint16_t c = 2; c < WDWD + 2; c++) {
@@ -33,6 +34,7 @@ void printworld_w(bit world[BITSLOTSP(WDHT + 4, WDWD + 4)], uintmax_t i) {
 
   // prints without the border wrap
   printf("{%d, %d} ", WDHT + 4, WDWD + 4);
+  printf(" %s ", FILENAME_IN);
   printf("world:\n");
   for (uint16_t r = 2; r < WDHT + 2; r++) {
     for (uint16_t c = 2; c < WDWD + 2; c++) {
