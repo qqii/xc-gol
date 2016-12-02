@@ -3,14 +3,14 @@
 
 #include <stdint.h>
 
-#define FILENAME_IN "cha.pgm"//"ch.pgm"
+#define FILENAME_IN ""//"cha.pgm"//"ch.pgm"
 #define FILENAME_OUT "testout.pgm"
 
 // #define VERBOSE
 
 // image height and width, has to match FILENAME_IN
 #define IMHT 16
-#define IMWD 16
+#define IMWD IMHT
 
 // world height and with, doesn't have to match image
 // larger worlds will cause the image to be placed from OFHT, OFWD

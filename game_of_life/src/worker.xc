@@ -5,7 +5,7 @@
 extern uint8_t hamming[16]; // hamming weight to calculate alive cells
 extern uint8_t hash[65536]; // hash for step lookup
 
-unsafe void worker(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], uint8_t wnumber, chanend toDist, chanend toNextWorker, chanend fromLastWorker){
+unsafe void worker(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], uint8_t wnumber, streaming chanend toDist, streaming chanend toNextWorker, streaming chanend fromLastWorker){
   // these makes sure that the worker rows are algined to multiples of 2
   uint16_t sr = (((WDHT + 2) / WCOUNT) * wnumber) & ~1;         // start row
   uint16_t er = (((WDHT + 2) / WCOUNT) * (wnumber + 1)) & ~1 ;  // end row
@@ -44,7 +44,7 @@ unsafe void worker(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], uint8_t w
 
 // the last worker doesn't sync to the next worker (since there isnt any)
 // this is _required_ to maintain channel limit
-unsafe void lastWorker(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], uint8_t wnumber, chanend toDist, chanend fromLastWorker){
+unsafe void lastWorker(bit (*unsafe world)[BITSLOTSP(WDHT + 4, WDWD + 4)], uint8_t wnumber, streaming chanend toDist, streaming chanend fromLastWorker){
   uint16_t sr =(((WDHT + 2) / WCOUNT) * wnumber) & ~1; // FIXME
   uint16_t er = WDHT + 2;
   // printf("Worker %d starting at %d and ending at %d\n", wnumber, sr, er);

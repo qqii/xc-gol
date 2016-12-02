@@ -93,7 +93,7 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
   // end of precomputation
 
   // await sw1
-  but :> uint8_t _;
+  // but :> uint8_t _;
   // green led for reading
   c_led <: D1_g;
 
@@ -121,19 +121,19 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
     }
   }
   _closeinpgm();
-  printworld_w(world, 0);
+  // printworld_w(world, 0);
 
   // finished loading file
 
-  chan toWorker[WCOUNT];
-  chan toNextWorker[WCOUNT];
+  streaming chan toWorker[WCOUNT];
+  streaming chan toNextWorker[WCOUNT];
 
   par{
     // start worker threads
     par (uint8_t i = 0; i < WCOUNT - 1; i++) {
       worker(world_p, i, toWorker[i], toNextWorker[i + 1], toNextWorker[i]);
     }
-    lastWorker(world_p, 6, toWorker[6],  toNextWorker[6]);
+    lastWorker(world_p, WCOUNT - 1, toWorker[WCOUNT - 1],  toNextWorker[WCOUNT - 1]);
 
     // worker management code
     {
@@ -239,7 +239,7 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
       printf("Iteration: %llu\t", i);
       printf("Elapsed Time (ns): %lu0\t", stop - start);
       printf("Alive Cells: %d\n", alivecount_w(world_p));
-      printworld_w(world, i);
+      // printworld_w(world, i);
     }
   }
 }
