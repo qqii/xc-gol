@@ -157,7 +157,7 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
             c_led <: D1_b;
             printworld_w(world, i);
             // save to file
-            if (_openoutpgm(FILENAME_IN, WDWD, WDHT)) {
+            if (_openoutpgm(FILENAME_OUT, WDWD, WDHT)) {
               printf("Error opening %s for saving.\n.", FILENAME_OUT);
               printf("Skipping save...\n.");
             } else {
