@@ -162,14 +162,14 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
               printf("Skipping save...\n.");
             } else {
               uint8_t line[WDWD]; // write out in storage
-              for (int16_t r = 0; r < WDHT; r++) {
-                for (int16_t c = 0; c < WDWD; c++) {
+              for (int16_t r = 2; r < WDHT + 2; r++) {
+                for (int16_t c = 2; c < WDWD + 2; c++) {
                   uint16_t sr = pmod((r - i) - 2, WDHT) + 2;
                   uint16_t sc = pmod((c - i) - 2, WDWD) + 2;
                   if (BITTESTP(world, sr, sc, WDWD + 4)) {
-                    line[c] = ~0;
+                    line[c - 2] = ~0;
                   } else {
-                    line[c] = 0;
+                    line[c - 2] = 0;
                   }
                 }
                 _writeoutline(line, WDWD);
@@ -240,6 +240,25 @@ unsafe void distributor(chanend ori, chanend but, streaming chanend c_led) {
       printf("Elapsed Time (ns): %lu0\t", stop - start);
       printf("Alive Cells: %d\n", alivecount_w(world_p));
       printworld_w(world, i);
+      if (_openoutpgm(FILENAME_OUT, WDWD, WDHT)) {
+        printf("Error opening %s for saving.\n.", FILENAME_OUT);
+        printf("Skipping save...\n.");
+      } else {
+        uint8_t line[WDWD]; // write out in storage
+        for (int16_t r = 2; r < WDHT + 2; r++) {
+          for (int16_t c = 2; c < WDWD + 2; c++) {
+            uint16_t sr = pmod((r - i) - 2, WDHT) + 2;
+            uint16_t sc = pmod((c - i) - 2, WDWD) + 2;
+            if (BITTESTP(world, sr, sc, WDWD + 4)) {
+              line[c - 2] = ~0;
+            } else {
+              line[c - 2] = 0;
+            }
+          }
+          _writeoutline(line, WDWD);
+        }
+      }
+      _closeoutpgm();
     }
   }
 }
